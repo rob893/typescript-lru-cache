@@ -1,26 +1,58 @@
 import { LRUCacheNode } from './LRUCacheNode';
 
-export class LRUCache<T = any> {
-  public readonly maxSize: number = 25;
+export interface LRUCacheOptions {
+  maxSize?: number;
+  entryExpirationTimeInMS?: number | null;
+}
 
-  private readonly lookup: Map<string, LRUCacheNode<T>> = new Map();
+export interface LRUCacheEntry<TKey, TValue> {
+  key: TKey;
+  value: TValue;
+}
 
-  private head: LRUCacheNode<T> | null = null;
+export class LRUCache<TKey = string, TValue = any> {
+  /**
+   * Returns the max number of entries the LRUCache can hold.
+   */
+  public readonly maxSize: number;
 
-  private tail: LRUCacheNode<T> | null = null;
+  private readonly lookup: Map<TKey, LRUCacheNode<TKey, TValue>> = new Map();
 
-  private size: number = 0;
+  private readonly entryExpirationTimeInMS: number | null;
 
-  public get currentSize(): number {
-    return this.size;
+  private head: LRUCacheNode<TKey, TValue> | null = null;
+
+  private tail: LRUCacheNode<TKey, TValue> | null = null;
+
+  public constructor(options?: LRUCacheOptions) {
+    const { maxSize = 25, entryExpirationTimeInMS = null } = options || {};
+
+    this.maxSize = maxSize;
+    this.entryExpirationTimeInMS = entryExpirationTimeInMS;
   }
 
+  /**
+   * Returns the number of entries in the LRUCache object.
+   */
+  public get size(): number {
+    return this.lookup.size;
+  }
+
+  /**
+   * Returns the number of entries that can still be added to the LRUCache without evicting existing entries.
+   */
   public get remainingSize(): number {
     return this.maxSize - this.size;
   }
 
-  public set(key: string, value: T): void {
-    this.ensureLimit();
+  /**
+   * Sets the value for the key in the LRUCache object. Returns the LRUCache object.
+   *
+   * @param key The key of the entry
+   * @param value The value to set for the key
+   */
+  public set(key: TKey, value: TValue): LRUCache<TKey, TValue> {
+    this.enforceSizeLimit();
 
     if (!this.head) {
       const node = new LRUCacheNode(key, value);
@@ -33,18 +65,26 @@ export class LRUCache<T = any> {
     }
 
     this.lookup.set(key, this.head);
-    this.size++;
+
+    return this;
   }
 
-  public read<TResult = T>(key: string): TResult | null {
+  /**
+   * Returns the value associated to the key, or null if there is none or if the entry is expired.
+   *
+   * @param key The key of the entry to get
+   */
+  public get<TResult = TValue>(key: TKey): TResult | null {
     const node = this.lookup.get(key);
 
     if (node) {
-      const { value } = node;
+      const { value, created } = node;
+      this.delete(key);
 
-      // node removed from it's position and cache
-      this.remove(key);
-      // write node again to the head of LinkedList to make it most recently used
+      if (this.entryExpirationTimeInMS && Date.now() - created > this.entryExpirationTimeInMS) {
+        return null;
+      }
+
       this.set(key, value);
 
       return (value as unknown) as TResult;
@@ -53,66 +93,17 @@ export class LRUCache<T = any> {
     return null;
   }
 
-  public clear(): void {
-    this.head = null;
-    this.tail = null;
-    this.size = 0;
-    this.lookup.clear();
-  }
-
-  public forEach(fn: (node: LRUCacheNode<T>, index: number) => void): void {
-    let node = this.head;
-    let index = 0;
-
-    while (node) {
-      fn(node, index);
-      node = node.next;
-      index++;
-    }
-  }
-
-  public *values(): Iterable<T> {
-    let node = this.head;
-
-    while (node) {
-      yield node.value;
-      node = node.next;
-    }
-  }
-
-  public *keys(): Iterable<string> {
-    let node = this.head;
-
-    while (node) {
-      yield node.key;
-      node = node.next;
-    }
-  }
-
-  public *[Symbol.iterator](): Iterable<LRUCacheNode<T>> {
-    let node = this.head;
-
-    while (node) {
-      yield node;
-      node = node.next;
-    }
-  }
-
-  private ensureLimit(): void {
-    if (this.size === this.maxSize) {
-      if (!this.tail) {
-        throw new Error('Something went wrong');
-      }
-
-      this.remove(this.tail.key);
-    }
-  }
-
-  private remove(key: string): void {
+  /**
+   * Returns true if an element in the LRUCache object existed and has been removed,
+   * or false if the element does not exist.
+   *
+   * @param key The key of the entry to delete
+   */
+  public delete(key: TKey): boolean {
     const node = this.lookup.get(key);
 
     if (!node) {
-      throw new Error(`No cached value found for key ${key}`);
+      return false;
     }
 
     if (node.prev !== null) {
@@ -127,7 +118,101 @@ export class LRUCache<T = any> {
       this.tail = node.prev;
     }
 
-    this.lookup.delete(key);
-    this.size--;
+    return this.lookup.delete(key);
+  }
+
+  /**
+   * Returns a boolean asserting whether a value has been associated to the key in the LRUCache object or not.
+   *
+   * @param key The key of the entry to check if exists
+   */
+  public has(key: TKey): boolean {
+    return this.lookup.has(key);
+  }
+
+  /**
+   * Removes all entries in the cache.
+   */
+  public clear(): void {
+    this.head = null;
+    this.tail = null;
+    this.lookup.clear();
+  }
+
+  public find(fn: (entry: LRUCacheEntry<TKey, TValue>) => boolean): LRUCacheEntry<TKey, TValue> | null {
+    let node = this.head;
+
+    while (node) {
+      const entry = this.mapNodeToEntry(node);
+      if (fn(entry)) {
+        return entry;
+      }
+    }
+
+    return null;
+  }
+
+  public forEach(fn: (value: TValue, key: TKey, index: number) => void): void {
+    let node = this.head;
+    let index = 0;
+
+    while (node) {
+      fn(node.value, node.key, index);
+      node = node.next;
+      index++;
+    }
+  }
+
+  public *values(): Iterable<TValue> {
+    let node = this.head;
+
+    while (node) {
+      yield node.value;
+      node = node.next;
+    }
+  }
+
+  public *keys(): Iterable<TKey> {
+    let node = this.head;
+
+    while (node) {
+      yield node.key;
+      node = node.next;
+    }
+  }
+
+  public *entries(): Iterable<LRUCacheEntry<TKey, TValue>> {
+    let node = this.head;
+
+    while (node) {
+      yield this.mapNodeToEntry(node);
+      node = node.next;
+    }
+  }
+
+  public *[Symbol.iterator](): Iterable<LRUCacheEntry<TKey, TValue>> {
+    let node = this.head;
+
+    while (node) {
+      yield this.mapNodeToEntry(node);
+      node = node.next;
+    }
+  }
+
+  private enforceSizeLimit(): void {
+    if (this.size === this.maxSize) {
+      if (!this.tail) {
+        throw new Error('Something went wrong');
+      }
+
+      this.delete(this.tail.key);
+    }
+  }
+
+  private mapNodeToEntry({ key, value }: LRUCacheNode<TKey, TValue>): LRUCacheEntry<TKey, TValue> {
+    return {
+      key,
+      value
+    };
   }
 }

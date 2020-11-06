@@ -1,17 +1,23 @@
-export class LRUCacheNode<T> {
-  public key: string;
+export class LRUCacheNode<TKey, TValue> {
+  public readonly key: TKey;
 
-  public value: T;
+  public readonly value: TValue;
 
-  public next: LRUCacheNode<T> | null;
+  public readonly created: number;
 
-  public prev: LRUCacheNode<T> | null;
+  public next: LRUCacheNode<TKey, TValue> | null;
 
-  public expires: Date | null = null;
+  public prev: LRUCacheNode<TKey, TValue> | null;
 
-  public constructor(key: string, value: T, next: LRUCacheNode<T> | null = null, prev: LRUCacheNode<T> | null = null) {
+  public constructor(
+    key: TKey,
+    value: TValue,
+    next: LRUCacheNode<TKey, TValue> | null = null,
+    prev: LRUCacheNode<TKey, TValue> | null = null
+  ) {
     this.key = key;
     this.value = value;
+    this.created = Date.now();
     this.next = next;
     this.prev = prev;
   }

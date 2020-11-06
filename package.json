@@ -4,7 +4,10 @@
   "description": "LRU Cache",
   "main": "index.js",
   "scripts": {
-    "test": "jest --coverage"
+    "prettier": "prettier --write **/*.{ts,js,css,html,json} !**/node_modules/** !**/dist/** !**/coverage/** !**/compiled/**",
+    "test": "jest --coverage",
+    "test-watch": "jest --watchAll --coverage",
+    "test-clean": "jest --clearCache"
   },
   "author": "Robert Herber",
   "license": "ISC",
