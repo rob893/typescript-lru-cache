@@ -71,6 +71,24 @@ export class LRUCache<T = any> {
     }
   }
 
+  public *values(): Iterable<T> {
+    let node = this.head;
+
+    while (node) {
+      yield node.value;
+      node = node.next;
+    }
+  }
+
+  public *keys(): Iterable<string> {
+    let node = this.head;
+
+    while (node) {
+      yield node.key;
+      node = node.next;
+    }
+  }
+
   public *[Symbol.iterator](): Iterable<LRUCacheNode<T>> {
     let node = this.head;
 
