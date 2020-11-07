@@ -77,20 +77,21 @@ export class LRUCache<TKey = string, TValue = any> {
   public get<TResult = TValue>(key: TKey): TResult | null {
     const node = this.lookup.get(key);
 
-    if (node) {
-      const { value, created } = node;
-      this.delete(key);
-
-      if (this.entryExpirationTimeInMS && Date.now() - created > this.entryExpirationTimeInMS) {
-        return null;
-      }
-
-      this.set(key, value);
-
-      return (value as unknown) as TResult;
+    if (!node) {
+      return null;
     }
 
-    return null;
+    this.delete(key);
+
+    if (this.isNodeExpired(node)) {
+      return null;
+    }
+
+    const { value } = node;
+
+    this.set(key, value);
+
+    return (value as unknown) as TResult;
   }
 
   /**
@@ -144,9 +145,21 @@ export class LRUCache<TKey = string, TValue = any> {
 
     while (node) {
       const entry = this.mapNodeToEntry(node);
+
       if (fn(entry)) {
+        // access the found entry to ensure it is not expired and mark it as recently used
+        const accessedItem = this.get(entry.key);
+
+        // If get returns null, skip node
+        if (!accessedItem) {
+          node = node.next;
+          continue;
+        }
+
         return entry;
       }
+
+      node = node.next;
     }
 
     return null;
@@ -214,5 +227,9 @@ export class LRUCache<TKey = string, TValue = any> {
       key,
       value
     };
+  }
+
+  private isNodeExpired({ created }: LRUCacheNode<TKey, TValue>): boolean {
+    return typeof this.entryExpirationTimeInMS === 'number' && Date.now() - created > this.entryExpirationTimeInMS;
   }
 }
