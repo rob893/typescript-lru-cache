@@ -1,0 +1,54 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2017": true,
+    "jest": true
+  },
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
+  "plugins": ["@typescript-eslint", "jest"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier",
+    "prettier/@typescript-eslint",
+    "plugin:jest/recommended"
+  ],
+  "ignorePatterns": ["node_modules/", "dist/"],
+  "rules": {
+    "@typescript-eslint/explicit-function-return-type": [
+      "error",
+      {
+        "allowExpressions": true
+      }
+    ],
+    "@typescript-eslint/member-ordering": "error",
+    "@typescript-eslint/no-for-in-array": "error",
+    "@typescript-eslint/no-this-alias": "error",
+    "@typescript-eslint/no-unnecessary-type-assertion": "error",
+    "@typescript-eslint/prefer-readonly": "error",
+    "@typescript-eslint/require-await": "error",
+    "prefer-exponentiation-operator": "error",
+    "prefer-object-spread": "error",
+    "prefer-rest-params": "error",
+    "prefer-template": "error",
+    "camelcase": "error",
+    "no-debugger": "warn",
+    "@typescript-eslint/no-inferrable-types": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-explicit-any": "off"
+  },
+  "overrides": [
+    {
+      "files": ["*.test.ts"],
+      "rules": {
+        "@typescript-eslint/no-non-null-assertion": "off"
+      }
+    }
+  ]
+}
