@@ -26,6 +26,17 @@ describe('LRUCache', () => {
 
       expect(cache.maxSize).toBe(maxSize);
     });
+
+    it.each([-1, 0, NaN, -12342])('should throw when passed an invalid maxSize', maxSize => {
+      expect(() => new LRUCache({ maxSize })).toThrow();
+    });
+
+    it.each([-1, 0, NaN, -12342])(
+      'should throw when passed an invalid entryExpirationTimeInMS',
+      entryExpirationTimeInMS => {
+        expect(() => new LRUCache({ entryExpirationTimeInMS })).toThrow();
+      }
+    );
   });
 
   describe('size', () => {
@@ -350,6 +361,144 @@ describe('LRUCache', () => {
 
       expect(result?.key).toBe('key1');
       expect(result?.value).toBe('some value2');
+    });
+  });
+
+  describe('forEach', () => {
+    it('should have 0 iterations due to empty cache', () => {
+      const cache = new LRUCache();
+
+      let i = 0;
+
+      cache.forEach(() => i++);
+
+      expect(i).toBe(0);
+    });
+
+    it('should have maxSize iterations due to full cache', () => {
+      const cache = new LRUCache();
+
+      for (let i = 0; i < cache.maxSize; i++) {
+        cache.set(`${i}`, i);
+      }
+
+      let i = 0;
+
+      cache.forEach(() => i++);
+
+      expect(i).toBe(cache.maxSize);
+    });
+  });
+
+  describe('iterator', () => {
+    it('should iterate 0 times due to empty cache', () => {
+      const cache = new LRUCache();
+
+      let i = 0;
+      for (const _entry of cache) {
+        i++;
+      }
+
+      expect(i).toBe(0);
+    });
+
+    it('should iterate maxSize times due to full cache', () => {
+      const cache = new LRUCache();
+
+      for (let i = 0; i < cache.maxSize; i++) {
+        cache.set(`${i}`, i);
+      }
+
+      let i = 0;
+      for (const _entry of cache) {
+        i++;
+      }
+
+      expect(i).toBe(cache.maxSize);
+    });
+  });
+
+  describe('keys', () => {
+    it('should iterate 0 times due to empty cache', () => {
+      const cache = new LRUCache();
+
+      let i = 0;
+      for (const _key of cache.keys()) {
+        i++;
+      }
+
+      expect(i).toBe(0);
+    });
+
+    it('should iterate maxSize times due to full cache', () => {
+      const cache = new LRUCache();
+
+      for (let i = 0; i < cache.maxSize; i++) {
+        cache.set(`${i}`, i);
+      }
+
+      let i = 0;
+      for (const _key of cache.keys()) {
+        i++;
+      }
+
+      expect(i).toBe(cache.maxSize);
+    });
+  });
+
+  describe('entries', () => {
+    it('should iterate 0 times due to empty cache', () => {
+      const cache = new LRUCache();
+
+      let i = 0;
+      for (const _entry of cache.entries()) {
+        i++;
+      }
+
+      expect(i).toBe(0);
+    });
+
+    it('should iterate maxSize times due to full cache', () => {
+      const cache = new LRUCache();
+
+      for (let i = 0; i < cache.maxSize; i++) {
+        cache.set(`${i}`, i);
+      }
+
+      let i = 0;
+      for (const _entry of cache.entries()) {
+        i++;
+      }
+
+      expect(i).toBe(cache.maxSize);
+    });
+  });
+
+  describe('values', () => {
+    it('should iterate 0 times due to empty cache', () => {
+      const cache = new LRUCache();
+
+      let i = 0;
+      for (const _values of cache.values()) {
+        i++;
+      }
+
+      expect(i).toBe(0);
+    });
+
+    it('should iterate maxSize times due to full cache', () => {
+      const cache = new LRUCache();
+
+      for (let i = 0; i < cache.maxSize; i++) {
+        cache.set(`${i}`, i);
+      }
+
+      let i = 0;
+      for (const _values of cache.values()) {
+        i++;
+      }
+
+      expect(i).toBe(cache.maxSize);
     });
   });
 });

@@ -16,7 +16,7 @@ export class LRUCache<TKey = string, TValue = any> {
    */
   public readonly maxSize: number;
 
-  private readonly lookup: Map<TKey, LRUCacheNode<TKey, TValue>> = new Map();
+  private readonly lookupTable: Map<TKey, LRUCacheNode<TKey, TValue>> = new Map();
 
   private readonly entryExpirationTimeInMS: number | null;
 
@@ -27,6 +27,17 @@ export class LRUCache<TKey = string, TValue = any> {
   public constructor(options?: LRUCacheOptions) {
     const { maxSize = 25, entryExpirationTimeInMS = null } = options || {};
 
+    if (Number.isNaN(maxSize) || maxSize <= 0) {
+      throw new Error('maxSize must be greater than 0.');
+    }
+
+    if (
+      typeof entryExpirationTimeInMS === 'number' &&
+      (entryExpirationTimeInMS <= 0 || Number.isNaN(entryExpirationTimeInMS))
+    ) {
+      throw new Error('entryExpirationTimeInMS must either be null (no expiry) or greater than 0');
+    }
+
     this.maxSize = maxSize;
     this.entryExpirationTimeInMS = entryExpirationTimeInMS;
   }
@@ -35,7 +46,7 @@ export class LRUCache<TKey = string, TValue = any> {
    * Returns the number of entries in the LRUCache object.
    */
   public get size(): number {
-    return this.lookup.size;
+    return this.lookupTable.size;
   }
 
   /**
@@ -53,18 +64,9 @@ export class LRUCache<TKey = string, TValue = any> {
    */
   public set(key: TKey, value: TValue): LRUCache<TKey, TValue> {
     this.enforceSizeLimit();
-
-    if (!this.head) {
-      const node = new LRUCacheNode(key, value);
-      this.head = node;
-      this.tail = node;
-    } else {
-      const node = new LRUCacheNode(key, value, this.head);
-      this.head.prev = node;
-      this.head = node;
-    }
-
-    this.lookup.set(key, this.head);
+    const node = new LRUCacheNode(key, value);
+    this.setNodeAsHead(node);
+    this.lookupTable.set(key, node);
 
     return this;
   }
@@ -75,23 +77,20 @@ export class LRUCache<TKey = string, TValue = any> {
    * @param key The key of the entry to get
    */
   public get<TResult = TValue>(key: TKey): TResult | null {
-    const node = this.lookup.get(key);
+    const node = this.lookupTable.get(key);
 
     if (!node) {
       return null;
     }
 
-    this.delete(key);
-
     if (this.isNodeExpired(node)) {
+      this.removeNodeFromListAndLookupTable(node);
       return null;
     }
 
-    const { value } = node;
+    this.setNodeAsHead(node);
 
-    this.set(key, value);
-
-    return (value as unknown) as TResult;
+    return (node.value as unknown) as TResult;
   }
 
   /**
@@ -101,25 +100,13 @@ export class LRUCache<TKey = string, TValue = any> {
    * @param key The key of the entry to delete
    */
   public delete(key: TKey): boolean {
-    const node = this.lookup.get(key);
+    const node = this.lookupTable.get(key);
 
     if (!node) {
       return false;
     }
 
-    if (node.prev !== null) {
-      node.prev.next = node.next;
-    } else {
-      this.head = node.next;
-    }
-
-    if (node.next !== null) {
-      node.next.prev = node.prev;
-    } else {
-      this.tail = node.prev;
-    }
-
-    return this.lookup.delete(key);
+    return this.removeNodeFromListAndLookupTable(node);
   }
 
   /**
@@ -128,7 +115,7 @@ export class LRUCache<TKey = string, TValue = any> {
    * @param key The key of the entry to check if exists
    */
   public has(key: TKey): boolean {
-    return this.lookup.has(key);
+    return this.lookupTable.has(key);
   }
 
   /**
@@ -137,24 +124,23 @@ export class LRUCache<TKey = string, TValue = any> {
   public clear(): void {
     this.head = null;
     this.tail = null;
-    this.lookup.clear();
+    this.lookupTable.clear();
   }
 
   public find(fn: (entry: LRUCacheEntry<TKey, TValue>) => boolean): LRUCacheEntry<TKey, TValue> | null {
     let node = this.head;
 
     while (node) {
+      if (this.isNodeExpired(node)) {
+        this.removeNodeFromListAndLookupTable(node);
+        node = node.next;
+        continue;
+      }
+
       const entry = this.mapNodeToEntry(node);
 
       if (fn(entry)) {
-        // access the found entry to ensure it is not expired and mark it as recently used
-        const accessedItem = this.get(entry.key);
-
-        // If get returns null, skip node
-        if (!accessedItem) {
-          node = node.next;
-          continue;
-        }
+        this.setNodeAsHead(node);
 
         return entry;
       }
@@ -170,43 +156,73 @@ export class LRUCache<TKey = string, TValue = any> {
     let index = 0;
 
     while (node) {
+      if (this.isNodeExpired(node)) {
+        this.removeNodeFromListAndLookupTable(node);
+        node = node.next;
+        continue;
+      }
+
       fn(node.value, node.key, index);
       node = node.next;
       index++;
     }
   }
 
-  public *values(): Iterable<TValue> {
+  public *values(): Generator<TValue> {
     let node = this.head;
 
     while (node) {
+      if (this.isNodeExpired(node)) {
+        this.removeNodeFromListAndLookupTable(node);
+        node = node.next;
+        continue;
+      }
+
       yield node.value;
       node = node.next;
     }
   }
 
-  public *keys(): Iterable<TKey> {
+  public *keys(): Generator<TKey> {
     let node = this.head;
 
     while (node) {
+      if (this.isNodeExpired(node)) {
+        this.removeNodeFromListAndLookupTable(node);
+        node = node.next;
+        continue;
+      }
+
       yield node.key;
       node = node.next;
     }
   }
 
-  public *entries(): Iterable<LRUCacheEntry<TKey, TValue>> {
+  public *entries(): Generator<LRUCacheEntry<TKey, TValue>> {
     let node = this.head;
 
     while (node) {
+      if (this.isNodeExpired(node)) {
+        this.removeNodeFromListAndLookupTable(node);
+        node = node.next;
+        continue;
+      }
+
       yield this.mapNodeToEntry(node);
       node = node.next;
     }
   }
 
-  public *[Symbol.iterator](): Iterable<LRUCacheEntry<TKey, TValue>> {
+  public *[Symbol.iterator](): Generator<LRUCacheEntry<TKey, TValue>> {
     let node = this.head;
 
     while (node) {
+      if (this.isNodeExpired(node)) {
+        this.removeNodeFromListAndLookupTable(node);
+        node = node.next;
+        continue;
+      }
+
       yield this.mapNodeToEntry(node);
       node = node.next;
     }
@@ -218,7 +234,7 @@ export class LRUCache<TKey = string, TValue = any> {
         throw new Error('Something went wrong');
       }
 
-      this.delete(this.tail.key);
+      this.removeNodeFromListAndLookupTable(this.tail);
     }
   }
 
@@ -231,5 +247,42 @@ export class LRUCache<TKey = string, TValue = any> {
 
   private isNodeExpired({ created }: LRUCacheNode<TKey, TValue>): boolean {
     return typeof this.entryExpirationTimeInMS === 'number' && Date.now() - created > this.entryExpirationTimeInMS;
+  }
+
+  private setNodeAsHead(node: LRUCacheNode<TKey, TValue>): void {
+    this.removeNodeFromList(node);
+
+    if (!this.head) {
+      this.head = node;
+      this.tail = node;
+    } else {
+      node.next = this.head;
+      this.head.prev = node;
+      this.head = node;
+    }
+  }
+
+  private removeNodeFromList(node: LRUCacheNode<TKey, TValue>): void {
+    if (node.prev !== null) {
+      node.prev.next = node.next;
+    }
+
+    if (this.head === node) {
+      this.head = node.next;
+    }
+
+    if (node.next !== null) {
+      node.next.prev = node.prev;
+    }
+
+    if (this.tail === node) {
+      this.tail = node.prev;
+    }
+  }
+
+  private removeNodeFromListAndLookupTable(node: LRUCacheNode<TKey, TValue>): boolean {
+    this.removeNodeFromList(node);
+
+    return this.lookupTable.delete(node.key);
   }
 }
