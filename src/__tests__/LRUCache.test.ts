@@ -1,4 +1,17 @@
-import { LRUCache } from '../LRUCache';
+import { LRUCache, LRUCacheEntry } from '../LRUCache';
+
+function listSize(cache: any): number {
+  let node = cache.head;
+
+  let i = 0;
+
+  while (node) {
+    i++;
+    node = node.next;
+  }
+
+  return i;
+}
 
 describe('LRUCache', () => {
   describe('constructor', () => {
@@ -37,6 +50,132 @@ describe('LRUCache', () => {
         expect(() => new LRUCache({ entryExpirationTimeInMS })).toThrow();
       }
     );
+  });
+
+  describe('newest', () => {
+    it('should return null for empty cache', () => {
+      const cache = new LRUCache();
+
+      expect(cache.newest).toBeNull();
+    });
+
+    it('should return the newest entry', () => {
+      const cache = new LRUCache();
+      const newestKey = 'newestKey';
+      const newestValue = 'newestValue';
+
+      cache.set('1', 'value1');
+      cache.set('2', 'value2');
+      cache.set(newestKey, newestValue);
+
+      const { key, value } = cache.newest || {};
+
+      expect(key).toBe(newestKey);
+      expect(value).toBe(newestValue);
+    });
+  });
+
+  describe('oldest', () => {
+    it('should return null for empty cache', () => {
+      const cache = new LRUCache();
+
+      expect(cache.oldest).toBeNull();
+    });
+
+    it('should return the oldest entry', () => {
+      const cache = new LRUCache();
+      const oldestKey = 'oldestKey';
+      const oldestValue = 'oldestValue';
+
+      cache.set(oldestKey, oldestValue);
+      cache.set('2', 'value2');
+      cache.set('3', 'value3');
+
+      const { key, value } = cache.oldest || {};
+
+      expect(key).toBe(oldestKey);
+      expect(value).toBe(oldestValue);
+    });
+  });
+
+  describe('maxSize', () => {
+    it('should default to 25', () => {
+      const cache = new LRUCache();
+
+      expect(cache.maxSize).toBe(25);
+    });
+
+    it.each([1, 5, 100, 34])('should be set to the passed in value', maxSize => {
+      const cache = new LRUCache({ maxSize });
+
+      expect(cache.maxSize).toBe(maxSize);
+    });
+
+    it.each([0, -1, -0.01, NaN, -1000])('should throw due to passing in invalid maxSize', maxSize => {
+      expect(() => new LRUCache({ maxSize })).toThrow();
+    });
+
+    it.each([1, 5, 100, 34])('should be set to the new value', maxSize => {
+      const cache = new LRUCache();
+
+      cache.maxSize = maxSize;
+
+      expect(cache.maxSize).toBe(maxSize);
+    });
+
+    it.each([0, -1, -0.01, NaN, -1000])('should throw due to attempting to set to invalid value', maxSize => {
+      const cache = new LRUCache();
+
+      expect(() => (cache.maxSize = maxSize)).toThrow();
+    });
+
+    it('should purge the least recently used entries to match new maxSize', () => {
+      const initialMaxSize = 20;
+      const finalMaxSize = 5;
+      const cache = new LRUCache({ maxSize: initialMaxSize });
+
+      const entries: LRUCacheEntry<string, number>[] = [];
+
+      for (let i = 0; i < initialMaxSize; i++) {
+        const key = `${i}`;
+        const value = i;
+        cache.set(key, value);
+        // Insert it at start as new lru cache entries will be at start
+        entries.unshift({ key, value });
+      }
+
+      expect(cache.maxSize).toBe(initialMaxSize);
+      expect(cache.size).toBe(initialMaxSize);
+      expect(listSize(cache)).toBe(initialMaxSize);
+
+      cache.maxSize = finalMaxSize;
+
+      // Ensure cache still has most recent entries
+      for (let i = 0; i < finalMaxSize; i++) {
+        const { key, value } = entries[i];
+
+        const hasKey = cache.has(key);
+        const cacheValue = cache.get(key);
+
+        expect(hasKey).toBe(true);
+        expect(cacheValue).toBe(value);
+      }
+
+      // Ensure cache does not have oldest entries
+      for (let i = finalMaxSize; i < entries.length; i++) {
+        const { key } = entries[i];
+
+        const hasKey = cache.has(key);
+        const cacheValue = cache.get(key);
+
+        expect(hasKey).toBe(false);
+        expect(cacheValue).toBeNull();
+      }
+
+      expect(cache.maxSize).toBe(finalMaxSize);
+      expect(cache.size).toBe(finalMaxSize);
+      expect(listSize(cache)).toBe(finalMaxSize);
+    });
   });
 
   describe('size', () => {
@@ -207,6 +346,115 @@ describe('LRUCache', () => {
     });
   });
 
+  describe('set', () => {
+    it('should add an entry to the cache', () => {
+      const cache = new LRUCache();
+      const key = 'test-key';
+      const value = 'test-value';
+
+      const cacheHasKeyPre = cache.has(key);
+      const cachedValuePre = cache.get(key);
+
+      expect(cacheHasKeyPre).toBe(false);
+      expect(cachedValuePre).toBeNull();
+      expect(cache.size).toBe(0);
+      expect(listSize(cache)).toBe(0);
+
+      cache.set(key, value);
+
+      const cacheHasKey = cache.has(key);
+      const cachedValue = cache.get(key);
+
+      expect(cacheHasKey).toBe(true);
+      expect(cachedValue).toBe(value);
+      expect(cache.size).toBe(1);
+      expect(listSize(cache)).toBe(1);
+    });
+
+    it('should return the cache instance', () => {
+      const cache = new LRUCache();
+
+      const result = cache.set('key', 'value');
+
+      expect(result).toBe(cache);
+    });
+
+    it('should override values of same key', () => {
+      const cache = new LRUCache();
+      const key = 'test-key';
+      const value1 = 'value1';
+      const value2 = 'value2';
+
+      cache.set(key, value1);
+
+      const result1 = cache.get(key);
+
+      expect(result1).toBe(value1);
+      expect(cache.size).toBe(1);
+      expect(listSize(cache)).toBe(1);
+
+      cache.set(key, value2);
+
+      const result2 = cache.get(key);
+
+      expect(result2).toBe(value2);
+      expect(cache.size).toBe(1);
+      expect(listSize(cache)).toBe(1);
+    });
+
+    it('should evict the least recently accessed entry', () => {
+      const cache = new LRUCache({ maxSize: 2 });
+      const lastAccessedKey = 'lastAccessedKey';
+      const lastAccessedValue = 'lastAccessedValue';
+
+      cache.set('key1', 'value1');
+      cache.set(lastAccessedKey, lastAccessedValue);
+
+      expect(cache.size).toBe(2);
+      expect(listSize(cache)).toBe(2);
+
+      // At this point, lastAccessedKey is the most recently accessed.
+      // Access the other to make lastAccessedKey last accessed
+
+      cache.get('key1');
+
+      // Adding a new value will now evict lastAccessedKey from cache
+
+      cache.set('key2', 'value2');
+
+      const result = cache.get(lastAccessedKey);
+
+      expect(result).toBeNull();
+      expect(cache.size).toBe(2);
+      expect(listSize(cache)).toBe(2);
+    });
+
+    it('should not evict the least recently accessed entry when setting a key that is already in cache', () => {
+      const cache = new LRUCache({ maxSize: 2 });
+      const key1 = 'key1';
+      const key2 = 'key2';
+      const value1 = 'value1';
+      const value2 = 'value2';
+      const value3 = 'value3';
+
+      cache.set(key1, value1);
+      cache.set(key2, value2);
+
+      expect(cache.size).toBe(2);
+      expect(listSize(cache)).toBe(2);
+
+      cache.set(key2, value3);
+
+      const key1Result = cache.get(key1);
+      const key2Result = cache.get(key2);
+
+      expect(key1Result).toBe(value1);
+      expect(key2Result).toBe(value3);
+      expect(cache.size).toBe(2);
+      expect(listSize(cache)).toBe(2);
+    });
+  });
+
   describe('get', () => {
     it('should return null for key not found in cache', () => {
       const cache = new LRUCache();
@@ -275,6 +523,111 @@ describe('LRUCache', () => {
 
       expect(nodeKey).toBe(key);
       expect(nodeValue).toBe(value);
+    });
+  });
+
+  describe('peek', () => {
+    it('should return null for key not found in cache', () => {
+      const cache = new LRUCache();
+
+      const result = cache.peek('test');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null for expired item', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10000 });
+      const key = 'test-key';
+
+      cache.set(key, 'value');
+
+      // force expiration
+      (cache as any).head.created = 0;
+
+      const result = cache.peek(key);
+
+      expect(result).toBeNull();
+    });
+
+    it('should purge expired item', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10000 });
+      const key = 'test-key';
+
+      cache.set(key, 'value');
+
+      // force expiration
+      (cache as any).head.created = 0;
+
+      cache.peek(key);
+
+      const { head, tail, size } = cache as any;
+
+      expect(head).toBeNull();
+      expect(tail).toBeNull();
+      expect(size).toBe(0);
+    });
+
+    it('should return the value for a given key', () => {
+      const cache = new LRUCache();
+      const key = 'test-key';
+      const value = 'test-value';
+
+      cache.set(key, value);
+
+      const result = cache.peek(key);
+
+      expect(result).toEqual(value);
+    });
+
+    it('should not make the most recently accessed item the head of list', () => {
+      const cache = new LRUCache();
+      const key = 'test-key';
+      const value = 'test-value';
+
+      cache.set(key, value);
+      cache.set('test2', 'test2Value');
+      cache.set('test3', 'test3');
+
+      cache.peek(key);
+
+      const { key: nodeKey, value: nodeValue } = (cache as any).head;
+
+      expect(nodeKey).toBe('test3');
+      expect(nodeValue).toBe('test3');
+    });
+  });
+
+  describe('delete', () => {
+    it('should return true for deleting an entry in the cache', () => {
+      const cache = new LRUCache();
+      const key = 'test-key';
+
+      cache.set(key, 'value');
+
+      expect(cache.size).toBe(1);
+      expect(listSize(cache)).toBe(1);
+
+      const result = cache.delete(key);
+
+      expect(result).toBe(true);
+      expect(cache.size).toBe(0);
+      expect(listSize(cache)).toBe(0);
+    });
+
+    it('should return false for key not found in cache', () => {
+      const cache = new LRUCache();
+      const key = 'test-key';
+
+      cache.set('not the key', 'value');
+
+      expect(cache.size).toBe(1);
+      expect(listSize(cache)).toBe(1);
+
+      const result = cache.delete(key);
+
+      expect(result).toBe(false);
+      expect(cache.size).toBe(1);
+      expect(listSize(cache)).toBe(1);
     });
   });
 
@@ -388,6 +741,72 @@ describe('LRUCache', () => {
 
       expect(i).toBe(cache.maxSize);
     });
+
+    it('should pass value as first argument, key as second argument, and index as third argument', () => {
+      const cache = new LRUCache();
+
+      const entries: LRUCacheEntry<string, number>[] = [];
+
+      for (let i = 0; i < cache.maxSize; i++) {
+        const key = `${i}`;
+        const value = i;
+        cache.set(key, value);
+        // Insert it at start as new lru cache entries will be at start
+        entries.unshift({ key, value });
+      }
+
+      let i = 0;
+
+      cache.forEach((value, key, index) => {
+        const entry = entries[index];
+        expect(value).toBe(entry.value);
+        expect(key).toBe(entry.key);
+        expect(index).toBe(i);
+        i++;
+      });
+    });
+
+    it('should remove and not iterate over expired entry', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10000 });
+
+      cache.set('1', 1);
+      cache.set('2', 2);
+      cache.set('3', 3);
+
+      // force expiration
+      (cache as any).head.created = 0;
+
+      let i = 0;
+
+      cache.forEach((value, key) => {
+        i++;
+        expect(value).not.toBe(3);
+        expect(key).not.toBe('3');
+      });
+
+      expect(i).toBe(2);
+    });
+
+    it('should iterate over unique entries based on key', () => {
+      const cache = new LRUCache();
+      const key = 'key';
+      const lastSetValue = 3;
+
+      cache.set(key, 1);
+      cache.set(key, 2);
+      cache.set(key, lastSetValue);
+
+      let i = 0;
+
+      cache.forEach((value, key) => {
+        i++;
+        expect(value).toBe(lastSetValue);
+        expect(key).toBe(key);
+      });
+
+      expect(i).toBe(1);
+      expect(listSize(cache)).toBe(1);
+    });
   });
 
   describe('iterator', () => {
@@ -415,6 +834,50 @@ describe('LRUCache', () => {
       }
 
       expect(i).toBe(cache.maxSize);
+    });
+
+    it('should iterate over entries in order from newest to oldest', () => {
+      const cache = new LRUCache();
+
+      const entries: LRUCacheEntry<string, number>[] = [];
+
+      for (let i = 0; i < cache.maxSize; i++) {
+        const key = `${i}`;
+        const value = i;
+        cache.set(key, value);
+        // Insert it at start as new lru cache entries will be at start
+        entries.unshift({ key, value });
+      }
+
+      let i = 0;
+
+      for (const { key, value } of cache) {
+        const { key: expectedKey, value: expectedValue } = entries[i];
+        expect(key).toBe(expectedKey);
+        expect(value).toBe(expectedValue);
+        i++;
+      }
+    });
+
+    it('should remove and not iterate over expired entry', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10000 });
+
+      cache.set('1', 1);
+      cache.set('2', 2);
+      cache.set('3', 3);
+
+      // force expiration
+      (cache as any).head.created = 0;
+
+      let i = 0;
+
+      for (const { key, value } of cache) {
+        expect(key).not.toBe('3');
+        expect(value).not.toBe(3);
+        i++;
+      }
+
+      expect(i).toBe(2);
     });
   });
 
@@ -444,6 +907,48 @@ describe('LRUCache', () => {
 
       expect(i).toBe(cache.maxSize);
     });
+
+    it('should iterate over keys in order from newest to oldest', () => {
+      const cache = new LRUCache();
+
+      const entries: LRUCacheEntry<string, number>[] = [];
+
+      for (let i = 0; i < cache.maxSize; i++) {
+        const key = `${i}`;
+        const value = i;
+        cache.set(key, value);
+        // Insert it at start as new lru cache entries will be at start
+        entries.unshift({ key, value });
+      }
+
+      let i = 0;
+
+      for (const key of cache.keys()) {
+        const { key: expectedKey } = entries[i];
+        expect(key).toBe(expectedKey);
+        i++;
+      }
+    });
+
+    it('should remove and not iterate over expired entry', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10000 });
+
+      cache.set('1', 1);
+      cache.set('2', 2);
+      cache.set('3', 3);
+
+      // force expiration
+      (cache as any).head.created = 0;
+
+      let i = 0;
+
+      for (const key of cache.keys()) {
+        expect(key).not.toBe('3');
+        i++;
+      }
+
+      expect(i).toBe(2);
+    });
   });
 
   describe('entries', () => {
@@ -472,6 +977,50 @@ describe('LRUCache', () => {
 
       expect(i).toBe(cache.maxSize);
     });
+
+    it('should iterate over entries in order from newest to oldest', () => {
+      const cache = new LRUCache();
+
+      const entries: LRUCacheEntry<string, number>[] = [];
+
+      for (let i = 0; i < cache.maxSize; i++) {
+        const key = `${i}`;
+        const value = i;
+        cache.set(key, value);
+        // Insert it at start as new lru cache entries will be at start
+        entries.unshift({ key, value });
+      }
+
+      let i = 0;
+
+      for (const { key, value } of cache.entries()) {
+        const { key: expectedKey, value: expectedValue } = entries[i];
+        expect(key).toBe(expectedKey);
+        expect(value).toBe(expectedValue);
+        i++;
+      }
+    });
+
+    it('should remove and not iterate over expired entry', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10000 });
+
+      cache.set('1', 1);
+      cache.set('2', 2);
+      cache.set('3', 3);
+
+      // force expiration
+      (cache as any).head.created = 0;
+
+      let i = 0;
+
+      for (const { key, value } of cache.entries()) {
+        expect(key).not.toBe('3');
+        expect(value).not.toBe(3);
+        i++;
+      }
+
+      expect(i).toBe(2);
+    });
   });
 
   describe('values', () => {
@@ -499,6 +1048,48 @@ describe('LRUCache', () => {
       }
 
       expect(i).toBe(cache.maxSize);
+    });
+
+    it('should iterate over values in order from newest to oldest', () => {
+      const cache = new LRUCache();
+
+      const entries: LRUCacheEntry<string, number>[] = [];
+
+      for (let i = 0; i < cache.maxSize; i++) {
+        const key = `${i}`;
+        const value = i;
+        cache.set(key, value);
+        // Insert it at start as new lru cache entries will be at start
+        entries.unshift({ key, value });
+      }
+
+      let i = 0;
+
+      for (const value of cache.values()) {
+        const { value: expectedValue } = entries[i];
+        expect(value).toBe(expectedValue);
+        i++;
+      }
+    });
+
+    it('should remove and not iterate over expired entry', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10000 });
+
+      cache.set('1', 1);
+      cache.set('2', 2);
+      cache.set('3', 3);
+
+      // force expiration
+      (cache as any).head.created = 0;
+
+      let i = 0;
+
+      for (const value of cache.values()) {
+        expect(value).not.toBe(3);
+        i++;
+      }
+
+      expect(i).toBe(2);
     });
   });
 });
