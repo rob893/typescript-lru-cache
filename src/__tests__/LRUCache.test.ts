@@ -5,9 +5,27 @@ function listSize(cache: any): number {
 
   let i = 0;
 
+  const visited = new Set();
+
   while (node) {
+    if (!cache.lookupTable.has(node.key)) {
+      throw new Error(
+        `Internal table does not have key ${node.key} however it is in the internal list. Stray node detected`
+      );
+    }
+
+    if (visited.has(node)) {
+      throw new Error(`Processed node with key ${node.key} twice. Circular reference detected`);
+    } else {
+      visited.add(node);
+    }
+
     i++;
     node = node.next;
+
+    if (i > cache.maxSize * 2) {
+      throw new Error(`Internal list size has exceeded the cache maxSize of ${cache.maxSize}`);
+    }
   }
 
   return i;
@@ -452,6 +470,39 @@ describe('LRUCache', () => {
       expect(key2Result).toBe(value3);
       expect(cache.size).toBe(2);
       expect(listSize(cache)).toBe(2);
+    });
+
+    it('should exercise the cache', () => {
+      const cache = new LRUCache({ maxSize: 50 });
+      const keys: string[] = [];
+
+      const randomNumber = (min: number, max: number): number => Math.floor(Math.random() * (max - min) + min);
+
+      // Fill cache while accessing cache
+      for (let i = 0; i < cache.maxSize; i++) {
+        cache.set(`${i}`, i);
+        keys.push(`${i}`);
+        const result = cache.get(keys[randomNumber(0, keys.length)]);
+        expect(result).not.toBeNull();
+        expect(listSize(cache)).toBe(cache.size);
+      }
+
+      // Randomly exercise the cache
+      for (let i = 0; i < 1000; i++) {
+        const rand = randomNumber(0, 10);
+
+        if (rand % 2 == 0) {
+          cache.get(keys[randomNumber(0, keys.length)]);
+        } else {
+          const secondRandom = randomNumber(0, 10);
+          const key = secondRandom % 2 === 0 ? `newKey${i}` : keys[randomNumber(0, keys.length)];
+          cache.set(key, i);
+        }
+
+        expect(listSize(cache)).toBe(cache.size);
+      }
+
+      expect(listSize(cache)).toBe(cache.size);
     });
   });
 
