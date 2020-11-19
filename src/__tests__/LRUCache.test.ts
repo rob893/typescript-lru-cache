@@ -1,14 +1,14 @@
 import { LRUCache, LRUCacheEntry } from '../LRUCache';
 
-function listSize(cache: any): number {
-  let node = cache.head;
+function validateCacheInternals(cache: LRUCache): void {
+  let node = (cache as any).head;
 
   let i = 0;
 
   const visited = new Set();
 
   while (node) {
-    if (!cache.lookupTable.has(node.key)) {
+    if (!(cache as any).lookupTable.has(node.key)) {
       throw new Error(
         `Internal table does not have key ${node.key} however it is in the internal list. Stray node detected`
       );
@@ -28,7 +28,9 @@ function listSize(cache: any): number {
     }
   }
 
-  return i;
+  if (i !== cache.size) {
+    throw new Error(`Internal list size of ${i} does not match size of internal table of ${cache.size}`);
+  }
 }
 
 describe('LRUCache', () => {
@@ -164,7 +166,7 @@ describe('LRUCache', () => {
 
       expect(cache.maxSize).toBe(initialMaxSize);
       expect(cache.size).toBe(initialMaxSize);
-      expect(listSize(cache)).toBe(initialMaxSize);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
 
       cache.maxSize = finalMaxSize;
 
@@ -192,7 +194,7 @@ describe('LRUCache', () => {
 
       expect(cache.maxSize).toBe(finalMaxSize);
       expect(cache.size).toBe(finalMaxSize);
-      expect(listSize(cache)).toBe(finalMaxSize);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
     });
   });
 
@@ -376,7 +378,7 @@ describe('LRUCache', () => {
       expect(cacheHasKeyPre).toBe(false);
       expect(cachedValuePre).toBeNull();
       expect(cache.size).toBe(0);
-      expect(listSize(cache)).toBe(0);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
 
       cache.set(key, value);
 
@@ -386,7 +388,7 @@ describe('LRUCache', () => {
       expect(cacheHasKey).toBe(true);
       expect(cachedValue).toBe(value);
       expect(cache.size).toBe(1);
-      expect(listSize(cache)).toBe(1);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
     });
 
     it('should return the cache instance', () => {
@@ -409,7 +411,7 @@ describe('LRUCache', () => {
 
       expect(result1).toBe(value1);
       expect(cache.size).toBe(1);
-      expect(listSize(cache)).toBe(1);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
 
       cache.set(key, value2);
 
@@ -417,7 +419,7 @@ describe('LRUCache', () => {
 
       expect(result2).toBe(value2);
       expect(cache.size).toBe(1);
-      expect(listSize(cache)).toBe(1);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
     });
 
     it('should evict the least recently accessed entry', () => {
@@ -429,7 +431,7 @@ describe('LRUCache', () => {
       cache.set(lastAccessedKey, lastAccessedValue);
 
       expect(cache.size).toBe(2);
-      expect(listSize(cache)).toBe(2);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
 
       // At this point, lastAccessedKey is the most recently accessed.
       // Access the other to make lastAccessedKey last accessed
@@ -444,7 +446,7 @@ describe('LRUCache', () => {
 
       expect(result).toBeNull();
       expect(cache.size).toBe(2);
-      expect(listSize(cache)).toBe(2);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
     });
 
     it('should not evict the least recently accessed entry when setting a key that is already in cache', () => {
@@ -459,7 +461,7 @@ describe('LRUCache', () => {
       cache.set(key2, value2);
 
       expect(cache.size).toBe(2);
-      expect(listSize(cache)).toBe(2);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
 
       cache.set(key2, value3);
 
@@ -469,7 +471,7 @@ describe('LRUCache', () => {
       expect(key1Result).toBe(value1);
       expect(key2Result).toBe(value3);
       expect(cache.size).toBe(2);
-      expect(listSize(cache)).toBe(2);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
     });
 
     it('should exercise the cache', () => {
@@ -484,11 +486,11 @@ describe('LRUCache', () => {
         keys.push(`${i}`);
         const result = cache.get(keys[randomNumber(0, keys.length)]);
         expect(result).not.toBeNull();
-        expect(listSize(cache)).toBe(cache.size);
+        expect(() => validateCacheInternals(cache)).not.toThrow();
       }
 
       // Randomly exercise the cache
-      for (let i = 0; i < 1000; i++) {
+      for (let i = 0; i < 100; i++) {
         const rand = randomNumber(0, 10);
 
         if (rand % 2 == 0) {
@@ -499,10 +501,11 @@ describe('LRUCache', () => {
           cache.set(key, i);
         }
 
-        expect(listSize(cache)).toBe(cache.size);
+        expect(() => validateCacheInternals(cache)).not.toThrow();
       }
 
-      expect(listSize(cache)).toBe(cache.size);
+      expect(cache.size).toBe(cache.maxSize);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
     });
   });
 
@@ -656,13 +659,13 @@ describe('LRUCache', () => {
       cache.set(key, 'value');
 
       expect(cache.size).toBe(1);
-      expect(listSize(cache)).toBe(1);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
 
       const result = cache.delete(key);
 
       expect(result).toBe(true);
       expect(cache.size).toBe(0);
-      expect(listSize(cache)).toBe(0);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
     });
 
     it('should return false for key not found in cache', () => {
@@ -672,13 +675,13 @@ describe('LRUCache', () => {
       cache.set('not the key', 'value');
 
       expect(cache.size).toBe(1);
-      expect(listSize(cache)).toBe(1);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
 
       const result = cache.delete(key);
 
       expect(result).toBe(false);
       expect(cache.size).toBe(1);
-      expect(listSize(cache)).toBe(1);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
     });
   });
 
@@ -856,7 +859,7 @@ describe('LRUCache', () => {
       });
 
       expect(i).toBe(1);
-      expect(listSize(cache)).toBe(1);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
     });
   });
 

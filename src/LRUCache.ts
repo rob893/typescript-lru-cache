@@ -215,8 +215,9 @@ export class LRUCache<TKey = string, TValue = any> {
 
     while (node) {
       if (this.isNodeExpired(node)) {
+        const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
-        node = node.next;
+        node = next;
         continue;
       }
 
@@ -248,8 +249,9 @@ export class LRUCache<TKey = string, TValue = any> {
 
     while (node) {
       if (this.isNodeExpired(node)) {
+        const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
-        node = node.next;
+        node = next;
         continue;
       }
 
@@ -270,8 +272,9 @@ export class LRUCache<TKey = string, TValue = any> {
 
     while (node) {
       if (this.isNodeExpired(node)) {
+        const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
-        node = node.next;
+        node = next;
         continue;
       }
 
@@ -291,8 +294,9 @@ export class LRUCache<TKey = string, TValue = any> {
 
     while (node) {
       if (this.isNodeExpired(node)) {
+        const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
-        node = node.next;
+        node = next;
         continue;
       }
 
@@ -312,8 +316,9 @@ export class LRUCache<TKey = string, TValue = any> {
 
     while (node) {
       if (this.isNodeExpired(node)) {
+        const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
-        node = node.next;
+        node = next;
         continue;
       }
 
@@ -333,8 +338,9 @@ export class LRUCache<TKey = string, TValue = any> {
 
     while (node) {
       if (this.isNodeExpired(node)) {
+        const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
-        node = node.next;
+        node = next;
         continue;
       }
 
@@ -347,8 +353,9 @@ export class LRUCache<TKey = string, TValue = any> {
     let node = this.tail;
 
     while (node !== null && this.size > this.maxSizeInternal) {
+      const prev = node.prev;
       this.removeNodeFromListAndLookupTable(node);
-      node = node.prev;
+      node = prev;
     }
   }
 
@@ -381,17 +388,20 @@ export class LRUCache<TKey = string, TValue = any> {
       node.prev.next = node.next;
     }
 
-    if (this.head === node) {
-      this.head = node.next;
-    }
-
     if (node.next !== null) {
       node.next.prev = node.prev;
+    }
+
+    if (this.head === node) {
+      this.head = node.next;
     }
 
     if (this.tail === node) {
       this.tail = node.prev;
     }
+
+    node.next = null;
+    node.prev = null;
   }
 
   private removeNodeFromListAndLookupTable(node: LRUCacheNode<TKey, TValue>): boolean {
