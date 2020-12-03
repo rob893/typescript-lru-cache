@@ -8,7 +8,7 @@
   },
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": "./tsconfig.json"
+    "project": "./tsconfig.eslint.json"
   },
   "plugins": ["@typescript-eslint", "jest"],
   "extends": [
@@ -18,7 +18,7 @@
     "prettier/@typescript-eslint",
     "plugin:jest/recommended"
   ],
-  "ignorePatterns": ["node_modules/", "dist/"],
+  "ignorePatterns": ["node_modules/", "dist/", "coverage/"],
   "rules": {
     "@typescript-eslint/explicit-function-return-type": [
       "error",

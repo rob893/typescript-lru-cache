@@ -1,33 +1,53 @@
 {
   "name": "lru-cache",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "LRU Cache",
-  "main": "index.js",
+  "author": "Robert Herber",
+  "license": "MIT",
+  "main": "dist/index",
+  "types": "dist/index",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rob893/lru-cache.git"
+  },
+  "keywords": [
+    "cache",
+    "lru",
+    "typescript"
+  ],
+  "bugs": {
+    "url": "https://github.com/rob893/lru-cache/issues"
+  },
+  "homepage": "https://github.com/rob893/lru-cache#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
+    "build": "rm -rf ./dist && tsc",
     "lint": "eslint .",
     "lint-fix": "eslint . --fix",
     "prettier": "prettier --write **/*.{ts,js,css,html,json} !**/node_modules/** !**/dist/** !**/coverage/** !**/compiled/**",
+    "release": "np",
     "test": "jest --coverage",
     "test-watch": "jest --watchAll --coverage",
     "test-clean": "jest --clearCache"
   },
-  "author": "Robert Herber",
-  "license": "ISC",
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",
     "@commitlint/config-conventional": "^11.0.0",
-    "@types/jest": "^26.0.15",
-    "@typescript-eslint/eslint-plugin": "^4.8.1",
-    "@typescript-eslint/parser": "^4.8.1",
-    "eslint": "^7.12.1",
+    "@types/jest": "^26.0.16",
+    "@typescript-eslint/eslint-plugin": "^4.9.0",
+    "@typescript-eslint/parser": "^4.9.0",
+    "eslint": "^7.14.0",
     "eslint-config-prettier": "^6.15.0",
     "eslint-plugin-jest": "^24.1.3",
-    "eslint-plugin-prettier": "^3.1.4",
+    "eslint-plugin-prettier": "^3.2.0",
     "husky": "^4.3.0",
     "jest": "^26.6.3",
-    "prettier": "^2.1.2",
+    "np": "^7.0.0",
+    "prettier": "^2.2.1",
     "ts-jest": "^26.4.4",
-    "ts-node": "^9.0.0",
-    "typescript": "^4.0.5"
+    "ts-node": "^9.1.0",
+    "typescript": "^4.1.2"
   }
 }
