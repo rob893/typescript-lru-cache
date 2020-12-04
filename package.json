@@ -27,7 +27,7 @@
     "lint": "eslint .",
     "lint-fix": "eslint . --fix",
     "prettier": "prettier --write **/*.{ts,js,css,html,json} !**/node_modules/** !**/dist/** !**/coverage/** !**/compiled/**",
-    "release": "np",
+    "release": "np --no-cleanup --no-2fa",
     "test": "jest --coverage",
     "test-watch": "jest --watchAll --coverage",
     "test-clean": "jest --clearCache",
