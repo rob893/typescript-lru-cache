@@ -5,7 +5,7 @@ This is a simple LRU cache implementation written in Typescript.
 ## Installation:
 
 ```typescript
-npm install typescript-lru-cache --save
+npm i typescript-lru-cache
 ```
 
 ## Usage:
