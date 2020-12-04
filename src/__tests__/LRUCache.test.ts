@@ -474,6 +474,31 @@ describe('LRUCache', () => {
       expect(() => validateCacheInternals(cache)).not.toThrow();
     });
 
+    it.each([10, null])('should set the cache exp time for node exp time', cacheExpTime => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: cacheExpTime });
+
+      cache.set('key', 'value');
+
+      const node = (cache as any).head;
+
+      expect(node.entryExpirationTimeInMS).toBe(cacheExpTime);
+    });
+
+    it.each([
+      { cacheExpTime: 10, entryExpTime: null },
+      { cacheExpTime: null, entryExpTime: 123 },
+      { cacheExpTime: 10, entryExpTime: 123 },
+      { cacheExpTime: null, entryExpTime: null }
+    ])('should override the cache level exp time with the passed in time', ({ entryExpTime, cacheExpTime }) => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: cacheExpTime });
+
+      cache.set('key', 'value', { entryExpirationTimeInMS: entryExpTime });
+
+      const node = (cache as any).head;
+
+      expect(node.entryExpirationTimeInMS).toBe(entryExpTime);
+    });
+
     it('should exercise the cache', () => {
       const cache = new LRUCache({ maxSize: 50 });
       const keys: string[] = [];

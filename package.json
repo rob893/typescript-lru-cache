@@ -1,5 +1,5 @@
 {
-  "name": "lru-cache",
+  "name": "typescript-lru-cache",
   "version": "0.0.0",
   "description": "LRU Cache",
   "author": "Robert Herber",
@@ -30,7 +30,8 @@
     "release": "np",
     "test": "jest --coverage",
     "test-watch": "jest --watchAll --coverage",
-    "test-clean": "jest --clearCache"
+    "test-clean": "jest --clearCache",
+    "version": "npm run build"
   },
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",

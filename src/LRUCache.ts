@@ -5,6 +5,10 @@ export interface LRUCacheOptions {
   entryExpirationTimeInMS?: number | null;
 }
 
+export interface LRUCacheSetEntryOptions {
+  entryExpirationTimeInMS?: number | null;
+}
+
 export interface LRUCacheEntry<TKey, TValue> {
   key: TKey;
   value: TValue;
@@ -107,14 +111,17 @@ export class LRUCache<TKey = string, TValue = any> {
    * @param key The key of the entry
    * @param value The value to set for the key
    */
-  public set(key: TKey, value: TValue): LRUCache<TKey, TValue> {
+  public set(key: TKey, value: TValue, entryOptions?: LRUCacheSetEntryOptions): LRUCache<TKey, TValue> {
     const currentNodeForKey = this.lookupTable.get(key);
 
     if (currentNodeForKey) {
       this.removeNodeFromListAndLookupTable(currentNodeForKey);
     }
 
-    const node = new LRUCacheNode(key, value);
+    const node = new LRUCacheNode(key, value, {
+      entryExpirationTimeInMS: this.entryExpirationTimeInMS,
+      ...entryOptions
+    });
     this.setNodeAsHead(node);
     this.lookupTable.set(key, node);
 
@@ -136,7 +143,7 @@ export class LRUCache<TKey = string, TValue = any> {
       return null;
     }
 
-    if (this.isNodeExpired(node)) {
+    if (node.isExpired) {
       this.removeNodeFromListAndLookupTable(node);
       return null;
     }
@@ -160,7 +167,7 @@ export class LRUCache<TKey = string, TValue = any> {
       return null;
     }
 
-    if (this.isNodeExpired(node)) {
+    if (node.isExpired) {
       this.removeNodeFromListAndLookupTable(node);
       return null;
     }
@@ -169,10 +176,11 @@ export class LRUCache<TKey = string, TValue = any> {
   }
 
   /**
-   * Returns true if an element in the LRUCache object existed and has been removed,
-   * or false if the element does not exist.
+   * Deletes the entry for the passed in key.
    *
    * @param key The key of the entry to delete
+   * @returns True if an element in the LRUCache object existed and has been removed,
+   * or false if the element does not exist.
    */
   public delete(key: TKey): boolean {
     const node = this.lookupTable.get(key);
@@ -189,6 +197,7 @@ export class LRUCache<TKey = string, TValue = any> {
    * This does not mark the entry as recently used.
    *
    * @param key The key of the entry to check if exists
+   * @returns true if the cache contains the supplied key. False if not.
    */
   public has(key: TKey): boolean {
     return this.lookupTable.has(key);
@@ -209,12 +218,13 @@ export class LRUCache<TKey = string, TValue = any> {
    * If an entry is returned, this marks the returned entry as the most recently used entry.
    *
    * @param condition The condition to apply to each entry in the
+   * @returns The first cache entry to match the condition. Null if none match.
    */
   public find(condition: (entry: LRUCacheEntry<TKey, TValue>) => boolean): LRUCacheEntry<TKey, TValue> | null {
     let node = this.head;
 
     while (node) {
-      if (this.isNodeExpired(node)) {
+      if (node.isExpired) {
         const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
         node = next;
@@ -248,7 +258,7 @@ export class LRUCache<TKey = string, TValue = any> {
     let index = 0;
 
     while (node) {
-      if (this.isNodeExpired(node)) {
+      if (node.isExpired) {
         const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
         node = next;
@@ -271,7 +281,7 @@ export class LRUCache<TKey = string, TValue = any> {
     let node = this.head;
 
     while (node) {
-      if (this.isNodeExpired(node)) {
+      if (node.isExpired) {
         const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
         node = next;
@@ -293,7 +303,7 @@ export class LRUCache<TKey = string, TValue = any> {
     let node = this.head;
 
     while (node) {
-      if (this.isNodeExpired(node)) {
+      if (node.isExpired) {
         const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
         node = next;
@@ -315,7 +325,7 @@ export class LRUCache<TKey = string, TValue = any> {
     let node = this.head;
 
     while (node) {
-      if (this.isNodeExpired(node)) {
+      if (node.isExpired) {
         const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
         node = next;
@@ -337,7 +347,7 @@ export class LRUCache<TKey = string, TValue = any> {
     let node = this.head;
 
     while (node) {
-      if (this.isNodeExpired(node)) {
+      if (node.isExpired) {
         const next = node.next;
         this.removeNodeFromListAndLookupTable(node);
         node = next;
@@ -364,10 +374,6 @@ export class LRUCache<TKey = string, TValue = any> {
       key,
       value
     };
-  }
-
-  private isNodeExpired({ created }: LRUCacheNode<TKey, TValue>): boolean {
-    return typeof this.entryExpirationTimeInMS === 'number' && Date.now() - created > this.entryExpirationTimeInMS;
   }
 
   private setNodeAsHead(node: LRUCacheNode<TKey, TValue>): void {
