@@ -234,7 +234,8 @@ export class LRUCache<TKey = string, TValue = any> {
   }
 
   /**
-   * Searchs the cache for an entry matching the passed in condition.
+   * Searches the cache for an entry matching the passed in condition.
+   * Expired entries will be skipped (and removed).
    * If multiply entries in the cache match the condition, the most recently used entry will be returned.
    * If an entry is returned, this marks the returned entry as the most recently used entry.
    *
@@ -269,8 +270,8 @@ export class LRUCache<TKey = string, TValue = any> {
   /**
    * Iterates over and applies the callback function to each entry in the cache.
    * Iterates in order from most recently accessed entry to least recently.
-   * Expired entries will be skipped.
-   * No entry will be marked as accessed.
+   * Expired entries will be skipped (and removed).
+   * No entry will be marked as recently used.
    *
    * @param callback the callback function to apply to the entry
    */
@@ -295,7 +296,7 @@ export class LRUCache<TKey = string, TValue = any> {
   /**
    * Creates a Generator which can be used with for ... of ... to iterate over the cache values.
    * Iterates in order from most recently accessed entry to least recently.
-   * Expired entries will be skipped.
+   * Expired entries will be skipped (and removed).
    * No entry will be marked as accessed.
    *
    * @returns A Generator for the cache values.
@@ -319,7 +320,7 @@ export class LRUCache<TKey = string, TValue = any> {
   /**
    * Creates a Generator which can be used with for ... of ... to iterate over the cache keys.
    * Iterates in order from most recently accessed entry to least recently.
-   * Expired entries will be skipped.
+   * Expired entries will be skipped (and removed).
    * No entry will be marked as accessed.
    *
    * @returns A Generator for the cache keys.
@@ -343,7 +344,7 @@ export class LRUCache<TKey = string, TValue = any> {
   /**
    * Creates a Generator which can be used with for ... of ... to iterate over the cache entries.
    * Iterates in order from most recently accessed entry to least recently.
-   * Expired entries will be skipped.
+   * Expired entries will be skipped (and removed).
    * No entry will be marked as accessed.
    *
    * @returns A Generator for the cache entries.
@@ -367,7 +368,7 @@ export class LRUCache<TKey = string, TValue = any> {
   /**
    * Creates a Generator which can be used with for ... of ... to iterate over the cache entries.
    * Iterates in order from most recently accessed entry to least recently.
-   * Expired entries will be skipped.
+   * Expired entries will be skipped (and removed).
    * No entry will be marked as accessed.
    *
    * @returns A Generator for the cache entries.
