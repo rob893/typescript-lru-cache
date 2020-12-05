@@ -25,6 +25,11 @@ export class LRUCache<TKey = string, TValue = any> {
 
   private tail: LRUCacheNode<TKey, TValue> | null = null;
 
+  /**
+   * Creates a new instance of the LRUCache.
+   *
+   * @param options Additional configuration options for the LRUCache.
+   */
   public constructor(options?: LRUCacheOptions) {
     const { maxSize = 25, entryExpirationTimeInMS = null } = options || {};
 
@@ -45,6 +50,8 @@ export class LRUCache<TKey = string, TValue = any> {
 
   /**
    * Returns the number of entries in the LRUCache object.
+   *
+   * @returns The number of entries in the cache.
    */
   public get size(): number {
     return this.lookupTable.size;
@@ -52,14 +59,18 @@ export class LRUCache<TKey = string, TValue = any> {
 
   /**
    * Returns the number of entries that can still be added to the LRUCache without evicting existing entries.
+   *
+   * @returns The number of entries that can still be added without evicting existing entries.
    */
   public get remainingSize(): number {
     return this.maxSizeInternal - this.size;
   }
 
   /**
-   * Returns the newest entry in the cache.
+   * Returns the most recently used (newest) entry in the cache.
    * This will not mark the entry as recently used.
+   *
+   * @returns The most recently used (newest) entry in the cache.
    */
   public get newest(): LRUCacheEntry<TKey, TValue> | null {
     if (!this.head) {
@@ -70,8 +81,10 @@ export class LRUCache<TKey = string, TValue = any> {
   }
 
   /**
-   * Returns the oldest entry in the cache.
+   * Returns the least recently used (oldest) entry in the cache.
    * This will not mark the entry as recently used.
+   *
+   * @returns The least recently used (oldest) entry in the cache.
    */
   public get oldest(): LRUCacheEntry<TKey, TValue> | null {
     if (!this.tail) {
@@ -83,6 +96,8 @@ export class LRUCache<TKey = string, TValue = any> {
 
   /**
    * Returns the max number of entries the LRUCache can hold.
+   *
+   * @returns The max size for the cache.
    */
   public get maxSize(): number {
     return this.maxSizeInternal;
@@ -91,6 +106,8 @@ export class LRUCache<TKey = string, TValue = any> {
   /**
    * Sets the maxSize of the cache.
    * This will evict the least recently used entries if needed to reach new maxSize.
+   *
+   * @param value The new value for maxSize. Must be greater than 0.
    */
   public set maxSize(value: number) {
     if (Number.isNaN(value) || value <= 0) {
@@ -108,8 +125,10 @@ export class LRUCache<TKey = string, TValue = any> {
    * If adding the new entry makes the cache size go above maxSize,
    * this will evict the least recently used entries until size is equal to maxSize.
    *
-   * @param key The key of the entry
-   * @param value The value to set for the key
+   * @param key The key of the entry.
+   * @param value The value to set for the key.
+   * @param entryOptions Additional configuration options for the cache entry.
+   * @returns The LRUCache instance.
    */
   public set(key: TKey, value: TValue, entryOptions?: LRUCacheSetEntryOptions): LRUCache<TKey, TValue> {
     const currentNodeForKey = this.lookupTable.get(key);
@@ -134,7 +153,8 @@ export class LRUCache<TKey = string, TValue = any> {
    * Returns the value associated to the key, or null if there is none or if the entry is expired.
    * If an entry is returned, this marks the returned entry as the most recently used entry.
    *
-   * @param key The key of the entry to get
+   * @param key The key of the entry to get.
+   * @returns The cached value or null.
    */
   public get(key: TKey): TValue | null {
     const node = this.lookupTable.get(key);
@@ -158,7 +178,8 @@ export class LRUCache<TKey = string, TValue = any> {
    * If an entry is returned, this will not mark the entry as most recently accessed.
    * Useful if a value is needed but the order of the cache should not be changed.
    *
-   * @param key The key of the entry to get
+   * @param key The key of the entry to get.
+   * @returns The cached value or null.
    */
   public peek(key: TKey): TValue | null {
     const node = this.lookupTable.get(key);
@@ -276,6 +297,8 @@ export class LRUCache<TKey = string, TValue = any> {
    * Iterates in order from most recently accessed entry to least recently.
    * Expired entries will be skipped.
    * No entry will be marked as accessed.
+   *
+   * @returns A Generator for the cache values.
    */
   public *values(): Generator<TValue> {
     let node = this.head;
@@ -298,6 +321,8 @@ export class LRUCache<TKey = string, TValue = any> {
    * Iterates in order from most recently accessed entry to least recently.
    * Expired entries will be skipped.
    * No entry will be marked as accessed.
+   *
+   * @returns A Generator for the cache keys.
    */
   public *keys(): Generator<TKey> {
     let node = this.head;
@@ -320,6 +345,8 @@ export class LRUCache<TKey = string, TValue = any> {
    * Iterates in order from most recently accessed entry to least recently.
    * Expired entries will be skipped.
    * No entry will be marked as accessed.
+   *
+   * @returns A Generator for the cache entries.
    */
   public *entries(): Generator<LRUCacheEntry<TKey, TValue>> {
     let node = this.head;
@@ -342,6 +369,8 @@ export class LRUCache<TKey = string, TValue = any> {
    * Iterates in order from most recently accessed entry to least recently.
    * Expired entries will be skipped.
    * No entry will be marked as accessed.
+   *
+   * @returns A Generator for the cache entries.
    */
   public *[Symbol.iterator](): Generator<LRUCacheEntry<TKey, TValue>> {
     let node = this.head;
