@@ -12,7 +12,7 @@ npm i typescript-lru-cache
 
 ## Why use this LRU Cache?
 
-This library was written in Typescript so type definitions are included out of the box and are always up to date. The Typescript source code is included in the package so users can easily look at the implementation. This cache uses a `Map` object for internal entry tracking, so any type can be used as a key (including reference types!).
+This library was written in Typescript so type definitions are included out of the box and are always up to date. The Typescript source code is included in the package so users can easily look at the implementation. This cache uses a `Map` object for internal entry tracking, so any type can be used as a key (including reference types!). Also, this library has no run-time dependencies!
 
 ## Usage:
 

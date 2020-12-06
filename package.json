@@ -8,7 +8,7 @@
   "types": "dist/index",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rob893/lru-cache.git"
+    "url": "git+https://github.com/rob893/typescript-lru-cache.git"
   },
   "keywords": [
     "cache",
@@ -16,9 +16,9 @@
     "typescript"
   ],
   "bugs": {
-    "url": "https://github.com/rob893/lru-cache/issues"
+    "url": "https://github.com/rob893/typescript-lru-cache/issues"
   },
-  "homepage": "https://github.com/rob893/lru-cache#readme",
+  "homepage": "https://github.com/rob893/typescript-lru-cache#readme",
   "publishConfig": {
     "access": "public"
   },
