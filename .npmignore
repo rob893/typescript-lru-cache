@@ -2,4 +2,4 @@
 !src/**/*
 !dist/**/*
 dist/**/*.test.*
-src/**/*.test.*
+src/__tests__
