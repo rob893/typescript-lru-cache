@@ -449,6 +449,114 @@ describe('LRUCache', () => {
       expect(() => validateCacheInternals(cache)).not.toThrow();
     });
 
+    it('should call the cache onEntryEvicted function', () => {
+      const onEntryEvicted = jest.fn();
+
+      const cache = new LRUCache({ maxSize: 2, onEntryEvicted });
+      const lastAccessedKey = 'lastAccessedKey';
+      const lastAccessedValue = 'lastAccessedValue';
+
+      cache.set('key1', 'value1');
+      cache.set(lastAccessedKey, lastAccessedValue);
+
+      // At this point, lastAccessedKey is the most recently accessed.
+      // Access the other to make lastAccessedKey last accessed
+      cache.get('key1');
+
+      // Adding a new value will now evict lastAccessedKey from cache
+      cache.set('key2', 'value2');
+
+      expect(onEntryEvicted).toBeCalledTimes(1);
+      expect(onEntryEvicted).toBeCalledWith({ key: lastAccessedKey, value: lastAccessedValue, isExpired: false });
+    });
+
+    it('should call the node onEntryEvicted function and not cache function', () => {
+      const cacheOnEntryEvicted = jest.fn();
+      const entryOnEntryEvicted = jest.fn();
+
+      const cache = new LRUCache({ maxSize: 2, onEntryEvicted: cacheOnEntryEvicted });
+      const lastAccessedKey = 'lastAccessedKey';
+      const lastAccessedValue = 'lastAccessedValue';
+
+      cache.set('key1', 'value1');
+      cache.set(lastAccessedKey, lastAccessedValue, { onEntryEvicted: entryOnEntryEvicted });
+
+      // At this point, lastAccessedKey is the most recently accessed.
+      // Access the other to make lastAccessedKey last accessed
+      cache.get('key1');
+
+      // Adding a new value will now evict lastAccessedKey from cache
+      cache.set('key2', 'value2');
+
+      expect(cacheOnEntryEvicted).not.toBeCalled();
+      expect(entryOnEntryEvicted).toBeCalledTimes(1);
+      expect(entryOnEntryEvicted).toBeCalledWith({ key: lastAccessedKey, value: lastAccessedValue, isExpired: false });
+    });
+
+    it('should call the cache onEntryMarkedAsMostRecentlyUsed function many times', () => {
+      const onEntryMarkedAsMostRecentlyUsed = jest.fn();
+
+      const cache = new LRUCache({ maxSize: 2, onEntryMarkedAsMostRecentlyUsed });
+      const lastAccessedKey = 'lastAccessedKey';
+      const lastAccessedValue = 'lastAccessedValue';
+
+      cache.set('key1', 'value1');
+
+      expect(onEntryMarkedAsMostRecentlyUsed).toHaveBeenLastCalledWith({ key: 'key1', value: 'value1' });
+
+      cache.set(lastAccessedKey, lastAccessedValue);
+
+      expect(onEntryMarkedAsMostRecentlyUsed).toHaveBeenLastCalledWith({
+        key: lastAccessedKey,
+        value: lastAccessedValue
+      });
+
+      // At this point, lastAccessedKey is the most recently accessed.
+      // Access the other to make lastAccessedKey last accessed
+
+      cache.get('key1');
+
+      expect(onEntryMarkedAsMostRecentlyUsed).toHaveBeenLastCalledWith({ key: 'key1', value: 'value1' });
+
+      // Adding a new value will now evict lastAccessedKey from cache
+
+      cache.set('key2', 'value2');
+
+      expect(onEntryMarkedAsMostRecentlyUsed).toHaveBeenLastCalledWith({ key: 'key2', value: 'value2' });
+      expect(onEntryMarkedAsMostRecentlyUsed).toBeCalledTimes(4);
+    });
+
+    it('should call the node onEntryMarkedAsMostRecentlyUsed function and not cache function when entry function is set', () => {
+      const cacheOnEntryMarkedAsMostRecentlyUsed = jest.fn();
+      const entryOnEntryMarkedAsMostRecentlyUsed = jest.fn();
+
+      const cache = new LRUCache({ maxSize: 2, onEntryMarkedAsMostRecentlyUsed: cacheOnEntryMarkedAsMostRecentlyUsed });
+
+      cache.set('key1', 'value1');
+
+      expect(cacheOnEntryMarkedAsMostRecentlyUsed).toHaveBeenCalledTimes(1);
+      expect(entryOnEntryMarkedAsMostRecentlyUsed).toHaveBeenCalledTimes(0);
+      expect(cacheOnEntryMarkedAsMostRecentlyUsed).toHaveBeenLastCalledWith({ key: 'key1', value: 'value1' });
+
+      cache.set('key2', 'value2', { onEntryMarkedAsMostRecentlyUsed: entryOnEntryMarkedAsMostRecentlyUsed });
+
+      expect(cacheOnEntryMarkedAsMostRecentlyUsed).toHaveBeenCalledTimes(1);
+      expect(entryOnEntryMarkedAsMostRecentlyUsed).toHaveBeenCalledTimes(1);
+      expect(entryOnEntryMarkedAsMostRecentlyUsed).toHaveBeenLastCalledWith({ key: 'key2', value: 'value2' });
+
+      cache.get('key1');
+
+      expect(cacheOnEntryMarkedAsMostRecentlyUsed).toHaveBeenCalledTimes(2);
+      expect(entryOnEntryMarkedAsMostRecentlyUsed).toHaveBeenCalledTimes(1);
+      expect(cacheOnEntryMarkedAsMostRecentlyUsed).toHaveBeenLastCalledWith({ key: 'key1', value: 'value1' });
+
+      cache.get('key2');
+
+      expect(cacheOnEntryMarkedAsMostRecentlyUsed).toHaveBeenCalledTimes(2);
+      expect(entryOnEntryMarkedAsMostRecentlyUsed).toHaveBeenCalledTimes(2);
+      expect(entryOnEntryMarkedAsMostRecentlyUsed).toHaveBeenLastCalledWith({ key: 'key2', value: 'value2' });
+    });
+
     it('should not evict the least recently accessed entry when setting a key that is already in cache', () => {
       const cache = new LRUCache({ maxSize: 2 });
       const key1 = 'key1';
@@ -498,6 +606,21 @@ describe('LRUCache', () => {
 
       expect(node.entryExpirationTimeInMS).toBe(entryExpTime);
     });
+
+    it.each([{ foo: 'bar' }, NaN, null, false, true, 3.14, 42, -100, Infinity, undefined, 'key'])(
+      'should allow any type for key',
+      key => {
+        const cache = new LRUCache<any, any>();
+        const value = 'someValue';
+
+        cache.set(key, value);
+
+        expect(cache.has(key)).toBe(true);
+        expect(cache.get(key)).toEqual(value);
+        expect(cache.size).toBe(1);
+        expect(() => validateCacheInternals(cache)).not.toThrow();
+      }
+    );
 
     it('should exercise the cache', () => {
       const cache = new LRUCache({ maxSize: 50 });
@@ -602,6 +725,36 @@ describe('LRUCache', () => {
 
       expect(nodeKey).toBe(key);
       expect(nodeValue).toBe(value);
+    });
+
+    it('should use reference of object for key', () => {
+      const cache = new LRUCache<any, any>();
+      const key = {
+        foo: 'bar'
+      };
+      const value = 'someValue';
+
+      cache.set(key, value);
+
+      const item = cache.get(key);
+
+      expect(item).toEqual(value);
+
+      const keyClone = { ...key };
+
+      const itemWithCloneKey = cache.get(keyClone);
+
+      expect(itemWithCloneKey).toBeNull();
+
+      const value2 = 'someOtherValue';
+
+      cache.set(keyClone, value2);
+
+      const item2 = cache.get(key);
+      const item3 = cache.get(keyClone);
+
+      expect(item2).toEqual(value);
+      expect(item3).toEqual(value2);
     });
   });
 

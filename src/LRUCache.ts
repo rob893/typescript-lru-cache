@@ -1,12 +1,16 @@
 import { LRUCacheNode } from './LRUCacheNode';
 
-export interface LRUCacheOptions {
+export interface LRUCacheOptions<TKey, TValue> {
   maxSize?: number;
   entryExpirationTimeInMS?: number | null;
+  onEntryEvicted?: (evictedEntry: { key: TKey; value: TValue; isExpired: boolean }) => void;
+  onEntryMarkedAsMostRecentlyUsed?: (entry: { key: TKey; value: TValue }) => void;
 }
 
-export interface LRUCacheSetEntryOptions {
+export interface LRUCacheSetEntryOptions<TKey, TValue> {
   entryExpirationTimeInMS?: number | null;
+  onEntryEvicted?: (evictedEntry: { key: TKey; value: TValue; isExpired: boolean }) => void;
+  onEntryMarkedAsMostRecentlyUsed?: (entry: { key: TKey; value: TValue }) => void;
 }
 
 export interface LRUCacheEntry<TKey, TValue> {
@@ -19,6 +23,10 @@ export class LRUCache<TKey = string, TValue = any> {
 
   private readonly entryExpirationTimeInMS: number | null;
 
+  private readonly onEntryEvicted?: (evictedEntry: { key: TKey; value: TValue; isExpired: boolean }) => void;
+
+  private readonly onEntryMarkedAsMostRecentlyUsed?: (entry: { key: TKey; value: TValue }) => void;
+
   private maxSizeInternal: number;
 
   private head: LRUCacheNode<TKey, TValue> | null = null;
@@ -30,8 +38,9 @@ export class LRUCache<TKey = string, TValue = any> {
    *
    * @param options Additional configuration options for the LRUCache.
    */
-  public constructor(options?: LRUCacheOptions) {
-    const { maxSize = 25, entryExpirationTimeInMS = null } = options || {};
+  public constructor(options?: LRUCacheOptions<TKey, TValue>) {
+    const { maxSize = 25, entryExpirationTimeInMS = null, onEntryEvicted, onEntryMarkedAsMostRecentlyUsed } =
+      options || {};
 
     if (Number.isNaN(maxSize) || maxSize <= 0) {
       throw new Error('maxSize must be greater than 0.');
@@ -46,6 +55,8 @@ export class LRUCache<TKey = string, TValue = any> {
 
     this.maxSizeInternal = maxSize;
     this.entryExpirationTimeInMS = entryExpirationTimeInMS;
+    this.onEntryEvicted = onEntryEvicted;
+    this.onEntryMarkedAsMostRecentlyUsed = onEntryMarkedAsMostRecentlyUsed;
   }
 
   /**
@@ -130,7 +141,7 @@ export class LRUCache<TKey = string, TValue = any> {
    * @param entryOptions Additional configuration options for the cache entry.
    * @returns The LRUCache instance.
    */
-  public set(key: TKey, value: TValue, entryOptions?: LRUCacheSetEntryOptions): LRUCache<TKey, TValue> {
+  public set(key: TKey, value: TValue, entryOptions?: LRUCacheSetEntryOptions<TKey, TValue>): LRUCache<TKey, TValue> {
     const currentNodeForKey = this.lookupTable.get(key);
 
     if (currentNodeForKey) {
@@ -139,6 +150,8 @@ export class LRUCache<TKey = string, TValue = any> {
 
     const node = new LRUCacheNode(key, value, {
       entryExpirationTimeInMS: this.entryExpirationTimeInMS,
+      onEntryEvicted: this.onEntryEvicted,
+      onEntryMarkedAsMostRecentlyUsed: this.onEntryMarkedAsMostRecentlyUsed,
       ...entryOptions
     });
     this.setNodeAsHead(node);
@@ -417,6 +430,8 @@ export class LRUCache<TKey = string, TValue = any> {
       this.head.prev = node;
       this.head = node;
     }
+
+    node.invokeOnEntryMarkedAsMostRecentlyUsed();
   }
 
   private removeNodeFromList(node: LRUCacheNode<TKey, TValue>): void {
@@ -441,6 +456,7 @@ export class LRUCache<TKey = string, TValue = any> {
   }
 
   private removeNodeFromListAndLookupTable(node: LRUCacheNode<TKey, TValue>): boolean {
+    node.invokeOnEvicted();
     this.removeNodeFromList(node);
 
     return this.lookupTable.delete(node.key);

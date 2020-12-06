@@ -82,4 +82,36 @@ describe('LRUCacheNode', () => {
       expect(node.entryExpirationTimeInMS).not.toBeNull();
     });
   });
+
+  describe('invokeOnEvicted', () => {
+    it('should call the passed in onEvicted function', () => {
+      const onEntryEvicted = jest.fn();
+
+      const key = 'key';
+      const value = 'value';
+
+      const node = new LRUCacheNode(key, value, { onEntryEvicted });
+
+      node.invokeOnEvicted();
+
+      expect(onEntryEvicted).toBeCalledTimes(1);
+      expect(onEntryEvicted).toBeCalledWith({ key, value, isExpired: false });
+    });
+  });
+
+  describe('invokeOnEntryMarkedAsMostRecentlyUsed', () => {
+    it('should call the passed in onEvicted function', () => {
+      const onEntryMarkedAsMostRecentlyUsed = jest.fn();
+
+      const key = 'key';
+      const value = 'value';
+
+      const node = new LRUCacheNode(key, value, { onEntryMarkedAsMostRecentlyUsed });
+
+      node.invokeOnEntryMarkedAsMostRecentlyUsed();
+
+      expect(onEntryMarkedAsMostRecentlyUsed).toBeCalledTimes(1);
+      expect(onEntryMarkedAsMostRecentlyUsed).toBeCalledWith({ key, value });
+    });
+  });
 });

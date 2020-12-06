@@ -10,6 +10,10 @@ Useful for when a cache size should be limited but the most used items should be
 npm i typescript-lru-cache
 ```
 
+## Why use this LRU Cache?
+
+This library was written in Typescript so type definitions are included out of the box and are always up to date. The Typescript source code is included in the package so users can easily look at the implementation. This cache uses a `Map` object for internal entry tracking, so any type can be used as a key (including reference types!).
+
 ## Usage:
 
 ```typescript
@@ -36,6 +40,8 @@ The options object has the following properties:
 
 - `maxSize` The max number of items the cache can hold. Once the cache reaches this number, the least recently used entries will start to be evicted to make room for new entries. Defaults to 25.
 - `entryExpirationTimeInMS` The time to live for cache entries. Setting this to `null` will make entries never expire. Default value is `null`.
+- `onEntryEvicted` Function to be called whenever an entry is evicted from the cache (when evicted due to needing to make room, is expired, or deleted using delete()). Passed arguments are (key, value, isExpired)
+- `onEntryMarkedAsMostRecentlyUsed` Function to be called whenever an entry is marked as recently used (on set, get, find, etc). Passed arguments are (key, value)
 
 ### LRUCache Set Entry Options:
 
@@ -44,6 +50,8 @@ Pass in an optional options object as the third argument of the `set` method to 
 The options object has the following properties:
 
 - `entryExpirationTimeInMS` The time to live for the entry. Setting this to `null` will make the entry never expire.
+- `onEntryEvicted` Function to be called whenever an entry is evicted from the cache (when evicted due to needing to make room, is expired, or deleted using delete()). Passed arguments are (key, value, isExpired)
+- `onEntryMarkedAsMostRecentlyUsed` Function to be called whenever an entry is marked as recently used (on set, get, find, etc). Passed arguments are (key, value)
 
 Example:
 
