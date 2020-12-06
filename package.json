@@ -23,6 +23,7 @@
     "access": "public"
   },
   "scripts": {
+    "benchmark": "ts-node ./src/benchmark/index.ts",
     "build": "rm -rf ./dist && tsc",
     "lint": "eslint .",
     "lint-fix": "eslint . --fix",
@@ -36,9 +37,11 @@
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",
     "@commitlint/config-conventional": "^11.0.0",
+    "@types/benchmark": "^2.1.0",
     "@types/jest": "^26.0.16",
     "@typescript-eslint/eslint-plugin": "^4.9.0",
     "@typescript-eslint/parser": "^4.9.0",
+    "benchmark": "^2.1.4",
     "eslint": "^7.15.0",
     "eslint-config-prettier": "^6.15.0",
     "eslint-plugin-jest": "^24.1.3",
