@@ -11,13 +11,7 @@
     "project": "./tsconfig.eslint.json"
   },
   "plugins": ["@typescript-eslint", "jest"],
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "prettier",
-    "prettier/@typescript-eslint",
-    "plugin:jest/recommended"
-  ],
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier", "plugin:jest/recommended"],
   "ignorePatterns": ["node_modules/", "dist/", "coverage/"],
   "rules": {
     "@typescript-eslint/explicit-function-return-type": [

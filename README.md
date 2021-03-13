@@ -45,13 +45,13 @@ The options object has the following properties:
 
 ### LRUCache Set Entry Options:
 
-Pass in an optional options object as the third argument of the `set` method to configure options for just that entry. These options will override LRUCache options if applicable.
+Pass in an optional options object as the third argument of the `set` method to configure options for just that entry. These options will override LRUCache options if applicable (including callback methods like onEntryEvicted).
 
 The options object has the following properties:
 
 - `entryExpirationTimeInMS` The time to live for the entry. Setting this to `null` will make the entry never expire.
-- `onEntryEvicted` Function to be called whenever an entry is evicted from the cache (when evicted due to needing to make room, is expired, or deleted using delete()). Passed arguments are (key, value, isExpired)
-- `onEntryMarkedAsMostRecentlyUsed` Function to be called whenever an entry is marked as recently used (on set, get, find, etc). Passed arguments are (key, value)
+- `onEntryEvicted` Function to be called whenever _this_ entry is evicted from the cache (when evicted due to needing to make room, is expired, or deleted using delete()). Passed arguments are (key, value, isExpired)
+- `onEntryMarkedAsMostRecentlyUsed` Function to be called whenever _this_ entry is marked as recently used (on set, get, find, etc). Passed arguments are (key, value)
 
 Example:
 
@@ -119,7 +119,7 @@ cache.set('testKey', 'testValue');
 const wasDeleted = cache.delete('testKey');
 
 // Will be false
-const wasDeleted2 = cache.deleted('keyNotInCache');
+const wasDeleted2 = cache.delete('keyNotInCache');
 ```
 
 - `has(key)` Returns a boolean asserting whether a value has been associated to the key in the LRUCache object or not. This does not mark the entry as recently used.
