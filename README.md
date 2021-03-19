@@ -38,6 +38,17 @@ Pass in an optional options object into the constructor of the LRU cache.
 
 The options object has the following properties:
 
+```typescript
+export interface LRUCacheOptions<TKey, TValue> {
+  maxSize?: number;
+  entryExpirationTimeInMS?: number | null;
+  onEntryEvicted?: (evictedEntry: { key: TKey; value: TValue; isExpired: boolean }) => void;
+  onEntryMarkedAsMostRecentlyUsed?: (entry: { key: TKey; value: TValue }) => void;
+  clone?: boolean;
+  cloneFn?: (value: TValue) => TValue;
+}
+```
+
 - `maxSize` The max number of items the cache can hold. Once the cache reaches this number, the least recently used entries will start to be evicted to make room for new entries. Defaults to 25.
 - `entryExpirationTimeInMS` The time to live for cache entries. Setting this to `null` will make entries never expire. Default value is `null`.
 - `onEntryEvicted` Function to be called whenever an entry is evicted from the cache (when evicted due to needing to make room, is expired, or deleted using delete()). Passed argument is an object:
@@ -86,6 +97,16 @@ console.log(value);
 Pass in an optional options object as the third argument of the `set` method to configure options for just that entry. These options will override LRUCache options if applicable (including callback methods like onEntryEvicted).
 
 The options object has the following properties:
+
+```typescript
+export interface LRUCacheSetEntryOptions<TKey, TValue> {
+  entryExpirationTimeInMS?: number | null;
+  onEntryEvicted?: (evictedEntry: { key: TKey; value: TValue; isExpired: boolean }) => void;
+  onEntryMarkedAsMostRecentlyUsed?: (entry: { key: TKey; value: TValue }) => void;
+  clone?: boolean;
+  cloneFn?: (value: TValue) => TValue;
+}
+```
 
 - `entryExpirationTimeInMS` The time to live for the entry. Setting this to `null` will make the entry never expire.
 - `onEntryEvicted` Function to be called whenever _this_ entry is evicted from the cache (when evicted due to needing to make room, is expired, or deleted using delete()). Passed argument is an object:
