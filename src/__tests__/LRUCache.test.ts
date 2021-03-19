@@ -60,6 +60,43 @@ describe('LRUCache', () => {
       expect(cache.maxSize).toBe(maxSize);
     });
 
+    it('should use passed in cloneFn when clone set to true', () => {
+      const cloneFn = jest.fn(value => value);
+      const cache = new LRUCache({ clone: true, cloneFn });
+
+      cache.set('key', 'value');
+      const result = cache.get('key');
+
+      expect(cloneFn).toHaveBeenCalledTimes(2);
+      expect(result).toBe('value');
+    });
+
+    it('should use passed in cloneFn to set over constructor', () => {
+      const cloneFn = jest.fn(value => value);
+      const cloneFn2 = jest.fn(value => value);
+      const cache = new LRUCache({ clone: true, cloneFn });
+
+      cache.set('key', 'value', { cloneFn: cloneFn2 });
+      const result = cache.get('key');
+
+      expect(cloneFn).not.toHaveBeenCalled();
+      expect(cloneFn2).toHaveBeenCalledTimes(2);
+      expect(result).toBe('value');
+    });
+
+    it('should not call cloneFn when set uses false', () => {
+      const cloneFn = jest.fn(value => value);
+      const cache = new LRUCache({ clone: true, cloneFn });
+      const key = 'key';
+      const value = { foo: 'bar' };
+
+      cache.set(key, value, { clone: false });
+      const result = cache.get(key);
+
+      expect(cloneFn).not.toHaveBeenCalled();
+      expect(result).toBe(value);
+    });
+
     it.each([-1, 0, NaN, -12342])('should throw when passed an invalid maxSize', maxSize => {
       expect(() => new LRUCache({ maxSize })).toThrow();
     });
@@ -93,6 +130,47 @@ describe('LRUCache', () => {
       expect(key).toBe(newestKey);
       expect(value).toBe(newestValue);
     });
+
+    it('should return the same newest entry', () => {
+      const cache = new LRUCache();
+      const newestKey = '3';
+      const newestValue = {
+        foo: 'bar',
+        baz: {
+          bax: 'bay'
+        }
+      };
+
+      cache.set('1', 'value2');
+      cache.set('2', 'value3');
+      cache.set(newestKey, newestValue);
+
+      const { key, value } = cache.newest || {};
+
+      expect(key).toBe(newestKey);
+      expect(value).toBe(newestValue);
+    });
+
+    it('should return cloned newest entry', () => {
+      const cache = new LRUCache({ clone: true });
+      const newestKey = '3';
+      const newestValue = {
+        foo: 'bar',
+        baz: {
+          bax: 'bay'
+        }
+      };
+
+      cache.set('1', 'value2');
+      cache.set('2', 'value3');
+      cache.set(newestKey, newestValue);
+
+      const { key, value } = cache.newest || {};
+
+      expect(key).toBe(newestKey);
+      expect(value).not.toBe(newestValue);
+      expect(value).toEqual(newestValue);
+    });
   });
 
   describe('oldest', () => {
@@ -115,6 +193,47 @@ describe('LRUCache', () => {
 
       expect(key).toBe(oldestKey);
       expect(value).toBe(oldestValue);
+    });
+
+    it('should return the same oldest entry', () => {
+      const cache = new LRUCache();
+      const oldestKey = 'oldestKey';
+      const oldestValue = {
+        foo: 'bar',
+        baz: {
+          bax: 'bay'
+        }
+      };
+
+      cache.set(oldestKey, oldestValue);
+      cache.set('2', 'value2');
+      cache.set('3', 'value3');
+
+      const { key, value } = cache.oldest || {};
+
+      expect(key).toBe(oldestKey);
+      expect(value).toBe(oldestValue);
+    });
+
+    it('should return cloned oldest entry', () => {
+      const cache = new LRUCache({ clone: true });
+      const oldestKey = 'oldestKey';
+      const oldestValue = {
+        foo: 'bar',
+        baz: {
+          bax: 'bay'
+        }
+      };
+
+      cache.set(oldestKey, oldestValue);
+      cache.set('2', 'value2');
+      cache.set('3', 'value3');
+
+      const { key, value } = cache.oldest || {};
+
+      expect(key).toBe(oldestKey);
+      expect(value).not.toBe(oldestValue);
+      expect(value).toEqual(oldestValue);
     });
   });
 
@@ -391,6 +510,36 @@ describe('LRUCache', () => {
       expect(() => validateCacheInternals(cache)).not.toThrow();
     });
 
+    it('should add a cloned entry to the cache', () => {
+      const cache = new LRUCache({ clone: true });
+      const key = 'test-key';
+      const value = {
+        foo: 'bar',
+        baz: {
+          bax: 'bay'
+        }
+      };
+
+      const cacheHasKeyPre = cache.has(key);
+      const cachedValuePre = cache.get(key);
+
+      expect(cacheHasKeyPre).toBe(false);
+      expect(cachedValuePre).toBeNull();
+      expect(cache.size).toBe(0);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
+
+      cache.set(key, value);
+
+      const cacheHasKey = cache.has(key);
+      const cachedValue = cache.get(key);
+
+      expect(cacheHasKey).toBe(true);
+      expect(cachedValue).not.toBe(value);
+      expect(cachedValue).toEqual(value);
+      expect(cache.size).toBe(1);
+      expect(() => validateCacheInternals(cache)).not.toThrow();
+    });
+
     it('should return the cache instance', () => {
       const cache = new LRUCache();
 
@@ -435,11 +584,9 @@ describe('LRUCache', () => {
 
       // At this point, lastAccessedKey is the most recently accessed.
       // Access the other to make lastAccessedKey last accessed
-
       cache.get('key1');
 
       // Adding a new value will now evict lastAccessedKey from cache
-
       cache.set('key2', 'value2');
 
       const result = cache.get(lastAccessedKey);
@@ -708,6 +855,48 @@ describe('LRUCache', () => {
       const result = cache.get(key);
 
       expect(result).toEqual(value);
+    });
+
+    it('should return a reference for a given key for reference types', () => {
+      const cache = new LRUCache();
+      const key = 'test-key';
+      const value = {
+        foo: 'bar',
+        bax: {
+          baz: 10
+        }
+      };
+
+      cache.set(key, value);
+
+      const result = cache.get(key);
+
+      expect(result).toBe(value);
+
+      value.foo = 'foobar';
+
+      expect(result.foo).toEqual('foobar');
+    });
+
+    it('should return a clone for a given key', () => {
+      const cache = new LRUCache({ clone: true });
+      const key = 'test-key';
+      const value = {
+        foo: 'bar',
+        bax: {
+          baz: 10
+        }
+      };
+
+      cache.set(key, value);
+
+      const result = cache.get(key);
+
+      expect(result).not.toBe(value);
+
+      value.foo = 'foobar';
+
+      expect(result.foo).toEqual('bar');
     });
 
     it('should make the most recently accessed item the head of list', () => {

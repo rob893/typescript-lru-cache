@@ -5,12 +5,16 @@ export interface LRUCacheOptions<TKey, TValue> {
   entryExpirationTimeInMS?: number | null;
   onEntryEvicted?: (evictedEntry: { key: TKey; value: TValue; isExpired: boolean }) => void;
   onEntryMarkedAsMostRecentlyUsed?: (entry: { key: TKey; value: TValue }) => void;
+  clone?: boolean;
+  cloneFn?: (value: TValue) => TValue;
 }
 
 export interface LRUCacheSetEntryOptions<TKey, TValue> {
   entryExpirationTimeInMS?: number | null;
   onEntryEvicted?: (evictedEntry: { key: TKey; value: TValue; isExpired: boolean }) => void;
   onEntryMarkedAsMostRecentlyUsed?: (entry: { key: TKey; value: TValue }) => void;
+  clone?: boolean;
+  cloneFn?: (value: TValue) => TValue;
 }
 
 export interface LRUCacheEntry<TKey, TValue> {
@@ -27,6 +31,10 @@ export class LRUCache<TKey = string, TValue = any> {
 
   private readonly onEntryMarkedAsMostRecentlyUsed?: (entry: { key: TKey; value: TValue }) => void;
 
+  private readonly cloneFn?: (value: TValue) => TValue;
+
+  private readonly clone?: boolean;
+
   private maxSizeInternal: number;
 
   private head: LRUCacheNode<TKey, TValue> | null = null;
@@ -39,8 +47,14 @@ export class LRUCache<TKey = string, TValue = any> {
    * @param options Additional configuration options for the LRUCache.
    */
   public constructor(options?: LRUCacheOptions<TKey, TValue>) {
-    const { maxSize = 25, entryExpirationTimeInMS = null, onEntryEvicted, onEntryMarkedAsMostRecentlyUsed } =
-      options || {};
+    const {
+      maxSize = 25,
+      entryExpirationTimeInMS = null,
+      onEntryEvicted,
+      onEntryMarkedAsMostRecentlyUsed,
+      cloneFn,
+      clone
+    } = options ?? {};
 
     if (Number.isNaN(maxSize) || maxSize <= 0) {
       throw new Error('maxSize must be greater than 0.');
@@ -57,6 +71,8 @@ export class LRUCache<TKey = string, TValue = any> {
     this.entryExpirationTimeInMS = entryExpirationTimeInMS;
     this.onEntryEvicted = onEntryEvicted;
     this.onEntryMarkedAsMostRecentlyUsed = onEntryMarkedAsMostRecentlyUsed;
+    this.clone = clone;
+    this.cloneFn = cloneFn;
   }
 
   /**
@@ -152,6 +168,8 @@ export class LRUCache<TKey = string, TValue = any> {
       entryExpirationTimeInMS: this.entryExpirationTimeInMS,
       onEntryEvicted: this.onEntryEvicted,
       onEntryMarkedAsMostRecentlyUsed: this.onEntryMarkedAsMostRecentlyUsed,
+      clone: this.clone,
+      cloneFn: this.cloneFn,
       ...entryOptions
     });
     this.setNodeAsHead(node);

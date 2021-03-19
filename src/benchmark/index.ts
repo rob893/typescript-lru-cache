@@ -36,6 +36,28 @@ suite.add('set with `maxAge`', function () {
   lru3.set(`key${lru3Counter++}`, 'value', { entryExpirationTimeInMS: 100000 });
 });
 
+const lru4 = new LRUCache({
+  maxSize: 1000,
+  clone: true
+});
+let lru4Counter = 0;
+
+suite.add('setClone', () => {
+  lru4.set(`key${lru4Counter++}`, { foo: 'bar' });
+});
+
+const lru5 = new LRUCache({
+  maxSize: 1000,
+  clone: true
+});
+let lru5Counter = 0;
+
+for (let i = 0; i < 1000; i++) lru5.set(`key${i}`, { foo: 'bar' });
+
+suite.add('getClone', () => {
+  lru5.get(`key${lru5Counter++ % 1000}`);
+});
+
 suite
   .on('cycle', (event: any) => {
     console.log(String(event.target));

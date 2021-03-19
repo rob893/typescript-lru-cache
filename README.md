@@ -55,6 +55,8 @@ The options object has the following properties:
     value: TValue;
   }
   ```
+- `clone` Clone values being set and fetched from the cache (clones on set and any retrievals). Useful to maintain immutability. NOTE! This does come with performance overhead (almost twice as slow). Defaults to false.
+- `cloneFn` Custom function to be used with the `clone` option. If not passed, `JSON.parse(JSON.stringify(value))` is used for cloning objects.
 
 Example using options:
 
@@ -101,6 +103,8 @@ The options object has the following properties:
     value: TValue;
   }
   ```
+- `clone` Clone values being set and fetched from the cache (clones on set and any retrievals). Useful to maintain immutability. NOTE! This does come with performance overhead (almost twice as slow). Defaults to false.
+- `cloneFn` Custom function to be used with the `clone` option. If not passed, `JSON.parse(JSON.stringify(value))` is used for cloning objects.
 
 Example:
 
