@@ -5,3 +5,6 @@ coverage/
 *.tsbuildinfo
 lerna-debug.log
 .npmrc
+# stryker temp files
+.stryker-tmp
+reports/
