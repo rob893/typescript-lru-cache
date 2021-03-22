@@ -1,6 +1,10 @@
 import { LRUCacheNode } from '../LRUCacheNode';
 
 describe('LRUCacheNode', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('constructor', () => {
     it.each([
       { key: 'key1', value: 'value1' },
@@ -34,7 +38,9 @@ describe('LRUCacheNode', () => {
     });
 
     it.each([0, -1, -1099387, NaN])('should throw for invalid entryExpirationTimeInMS', num => {
-      expect(() => new LRUCacheNode('key', 'value', { entryExpirationTimeInMS: num })).toThrow();
+      expect(() => new LRUCacheNode('key', 'value', { entryExpirationTimeInMS: num })).toThrow(
+        'entryExpirationTimeInMS must either be null (no expiry) or greater than 0'
+      );
     });
 
     it('should set the passed in next node as next', () => {
@@ -113,5 +119,59 @@ describe('LRUCacheNode', () => {
       expect(onEntryMarkedAsMostRecentlyUsed).toBeCalledTimes(1);
       expect(onEntryMarkedAsMostRecentlyUsed).toBeCalledWith({ key, value });
     });
+  });
+
+  describe('value', () => {
+    it.each([[1, 2, ['a', 'b'], 3], { foo: 'bar', bax: { baz: 6 } }, 0, NaN, 'foo', '', 5, false, true])(
+      'should not use JSON.stringify if cloning is not enabled',
+      value => {
+        const spy = jest.spyOn(JSON, 'stringify');
+
+        const key = 'key';
+
+        const node = new LRUCacheNode(key, value, { clone: false });
+        const result = node.value;
+
+        expect(result).toBe(value);
+        expect(spy).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each([[1, 2, ['a', 'b'], 3], { foo: 'bar', bax: { baz: 6 } }])(
+      'should use JSON.stringify for cloning non-primitives as default',
+      value => {
+        const spy = jest.spyOn(JSON, 'stringify');
+
+        const key = 'key';
+
+        const node = new LRUCacheNode(key, value, { clone: true });
+
+        expect(spy).toBeCalledTimes(1);
+        expect(spy).toBeCalledWith(value);
+
+        const result = node.value;
+
+        expect(result).toEqual(value);
+        expect(result).not.toBe(value);
+        expect(spy).toBeCalledTimes(2);
+        expect(spy).toBeCalledWith(value);
+      }
+    );
+
+    it.each([0, NaN, 'foo', '', 5, false, true])(
+      'should not use JSON.stringify for cloning primitives as default',
+      value => {
+        const spy = jest.spyOn(JSON, 'stringify');
+
+        const key = 'key';
+
+        const node = new LRUCacheNode(key, value, { clone: true });
+
+        const result = node.value;
+
+        expect(result).toEqual(value);
+        expect(spy).not.toHaveBeenCalled();
+      }
+    );
   });
 });

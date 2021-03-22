@@ -3,14 +3,11 @@
   "packageManager": "npm",
   "reporters": ["html", "clear-text", "progress"],
   "mutate": ["src/**/*.ts", "!src/**/__tests__/**/*.ts", "!src/**/index.ts", "!src/benchmark/**/*"],
-  "mutator": {
-    "excludedMutations": ["BlockStatement"]
-  },
+  "tempDirName": "_stryker-tmp",
   "testRunner": "jest",
   "coverageAnalysis": "perTest",
   "jest": {
-    "configFile": "jest.config.js",
-    "enableFindRelatedTests": false
+    "configFile": "jest.config.js"
   },
   "checkers": ["typescript"],
   "tsconfigFile": "tsconfig.mutate.json"

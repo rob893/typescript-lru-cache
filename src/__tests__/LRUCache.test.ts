@@ -1,5 +1,7 @@
 import { LRUCache, LRUCacheEntry } from '../LRUCache';
 
+jest.setTimeout(500);
+
 function validateCacheInternals(cache: LRUCache): void {
   let node = (cache as any).head;
 
@@ -98,13 +100,15 @@ describe('LRUCache', () => {
     });
 
     it.each([-1, 0, NaN, -12342])('should throw when passed an invalid maxSize', maxSize => {
-      expect(() => new LRUCache({ maxSize })).toThrow();
+      expect(() => new LRUCache({ maxSize })).toThrow('maxSize must be greater than 0.');
     });
 
     it.each([-1, 0, NaN, -12342])(
       'should throw when passed an invalid entryExpirationTimeInMS',
       entryExpirationTimeInMS => {
-        expect(() => new LRUCache({ entryExpirationTimeInMS })).toThrow();
+        expect(() => new LRUCache({ entryExpirationTimeInMS })).toThrow(
+          'entryExpirationTimeInMS must either be null (no expiry) or greater than 0'
+        );
       }
     );
   });
@@ -251,7 +255,7 @@ describe('LRUCache', () => {
     });
 
     it.each([0, -1, -0.01, NaN, -1000])('should throw due to passing in invalid maxSize', maxSize => {
-      expect(() => new LRUCache({ maxSize })).toThrow();
+      expect(() => new LRUCache({ maxSize })).toThrow('maxSize must be greater than 0.');
     });
 
     it.each([1, 5, 100, 34])('should be set to the new value', maxSize => {
@@ -265,7 +269,7 @@ describe('LRUCache', () => {
     it.each([0, -1, -0.01, NaN, -1000])('should throw due to attempting to set to invalid value', maxSize => {
       const cache = new LRUCache();
 
-      expect(() => (cache.maxSize = maxSize)).toThrow();
+      expect(() => (cache.maxSize = maxSize)).toThrow('maxSize must be greater than 0.');
     });
 
     it('should purge the least recently used entries to match new maxSize', () => {
