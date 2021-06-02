@@ -5,6 +5,7 @@
     "target": "es2019",
     "strict": true,
     "esModuleInterop": true,
+    "noImplicitOverride": true,
     "forceConsistentCasingInFileNames": true,
     "preserveConstEnums": true,
     "sourceMap": true,
