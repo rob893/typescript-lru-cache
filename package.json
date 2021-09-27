@@ -29,11 +29,15 @@
     "lint-fix": "eslint . --fix",
     "prettier": "prettier --write **/*.{ts,js,css,html,json} !**/node_modules/** !**/dist/** !**/coverage/** !**/compiled/**",
     "release": "np --no-cleanup --no-2fa",
+    "build-circular-dependency-check": "madge --circular ./dist",
+    "circular-dependency-check": "madge --circular --extensions ts --ts-config tsconfig.json ./src",
     "test": "jest --coverage",
     "test-watch": "jest --watchAll --coverage",
     "test-clean": "jest --clearCache",
     "test-mutate": "npx stryker run",
-    "version": "npm run build"
+    "typedoc": "rm -rf ./docs && typedoc src/index.ts",
+    "version": "npm run build && npm run typedoc",
+    "validate": "npm run build && npm run build-circular-dependency-check && npm t && npm run lint"
   },
   "devDependencies": {
     "@commitlint/cli": "^13.1.0",
@@ -42,20 +46,22 @@
     "@stryker-mutator/jest-runner": "^5.4.0",
     "@stryker-mutator/typescript-checker": "^5.4.0",
     "@types/benchmark": "^2.1.1",
-    "@types/jest": "^27.0.1",
-    "@typescript-eslint/eslint-plugin": "^4.30.0",
-    "@typescript-eslint/parser": "^4.30.0",
+    "@types/jest": "^27.0.2",
+    "@typescript-eslint/eslint-plugin": "^4.31.2",
+    "@typescript-eslint/parser": "^4.31.2",
     "benchmark": "^2.1.4",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-jest": "^24.4.0",
+    "eslint-plugin-jest": "^24.4.2",
     "eslint-plugin-prettier": "^4.0.0",
-    "husky": "^4.3.8",
-    "jest": "^27.1.0",
+    "husky": "^7.0.2",
+    "jest": "^27.2.2",
+    "madge": "^5.0.1",
     "np": "^7.5.0",
-    "prettier": "^2.3.2",
+    "prettier": "^2.4.1",
     "ts-jest": "^27.0.5",
     "ts-node": "^10.2.1",
-    "typescript": "^4.4.2"
+    "typedoc": "^0.22.4",
+    "typescript": "^4.4.3"
   }
 }

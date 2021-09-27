@@ -2,4 +2,4 @@
 !src/**/*
 !dist/**/*
 src/__tests__
-src/benchmark
+src/__benchmarks__

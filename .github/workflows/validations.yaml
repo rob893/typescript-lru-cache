@@ -1,0 +1,30 @@
+name: Validations
+
+on: [push, pull_request]
+
+jobs:
+  validations:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["11", "12", "14", "16"]
+    name: Node ${{ matrix.node }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Set up Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Test
+        run: npm t
+      - name: Lint
+        run: npm run lint
+      - name: Circular dependency check
+        uses: gerrit0/circular-dependency-check@v1
+        with:
+          entry: dist/index.js
