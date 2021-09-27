@@ -16,6 +16,8 @@ This library was written in Typescript so type definitions are included out of t
 
 ## Usage:
 
+See TypeDoc documentation [here.](https://rob893.github.io/typescript-lru-cache/)
+
 ```typescript
 import { LRUCache } from 'typescript-lru-cache';
 
