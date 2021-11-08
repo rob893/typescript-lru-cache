@@ -1,4 +1,4 @@
-import { LRUCache, LRUCacheEntry } from '../LRUCache';
+import { LRUCache, LRUCacheEntry, LRUCacheOptions, LRUCacheSetEntryOptions } from '../LRUCache';
 
 jest.setTimeout(500);
 
@@ -948,6 +948,177 @@ describe('LRUCache', () => {
 
       expect(item2).toEqual(value);
       expect(item3).toEqual(value2);
+    });
+  });
+
+  describe('getOrCreate', () => {
+    describe('when the key exists and is not expired', () => {
+      it('should return the value', async () => {
+        const cache = new LRUCache<string, number>();
+        cache.set('foo', 1);
+
+        const v = await cache.getOrCreate('foo', () => 2);
+        expect(v).toBe(1);
+      });
+
+      it('should move the entry to the head', async () => {
+        const marked = jest.fn(() => {});
+
+        const cache = new LRUCache<string, number>({
+          onEntryMarkedAsMostRecentlyUsed: marked
+        });
+        cache.set('foo', 1);
+
+        await cache.getOrCreate('foo', () => 2);
+        expect(marked).toHaveBeenCalledWith({
+          key: 'foo',
+          value: 1
+        });
+      });
+
+      it('should not trigger the creator fn', async () => {
+        const cache = new LRUCache<string, number>();
+        cache.set('foo', 1);
+        const creator = jest.fn(() => 2);
+
+        await cache.getOrCreate('foo', creator);
+        expect(creator).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('when key exists and is expired', () => {
+      const forceExpiration = (cache: LRUCache<string, number>): void => {
+        (cache as any).head.created = 0;
+      };
+
+      const createCacheWithExpiredItem = (options?: LRUCacheOptions<string, number>): LRUCache<string, number> => {
+        const cache = new LRUCache<string, number>(options);
+        cache.set('foo', 100, {
+          entryExpirationTimeInMS: 1
+        });
+        forceExpiration(cache);
+        return cache;
+      };
+
+      it('should call the creator for a non-async value', async () => {
+        const cache = createCacheWithExpiredItem();
+        const creator = jest.fn(() => 4);
+        const v = await cache.getOrCreate('foo', creator);
+        expect(v).toBe(4);
+        expect(creator).toHaveBeenCalledTimes(1);
+      });
+
+      it('should call the creator for an async value', async () => {
+        const cache = createCacheWithExpiredItem();
+        const creator = jest.fn(() => Promise.resolve(4));
+        const v = await cache.getOrCreate('foo', creator);
+        expect(v).toBe(4);
+        expect(creator).toHaveBeenCalledTimes(1);
+      });
+
+      it('should pass the options and allow configuration', async () => {
+        const cache = createCacheWithExpiredItem();
+        const cloneFn = jest.fn((n: number) => n);
+        const creator = jest.fn((options: LRUCacheSetEntryOptions<string, number>) => {
+          options.cloneFn = cloneFn;
+          options.clone = true;
+          return Promise.resolve(4);
+        });
+        const v = await cache.getOrCreate('foo', creator);
+        expect(v).toBe(4);
+        expect(cloneFn).toHaveBeenCalledTimes(1);
+        expect(cloneFn).toHaveBeenCalledWith(4);
+      });
+
+      it('should trigger an eviction of the expired item', async () => {
+        const evict = jest.fn(() => {});
+        const cache = createCacheWithExpiredItem({
+          onEntryEvicted: evict
+        });
+        cache.set('bar', 2);
+        await cache.getOrCreate('foo', () => 1);
+        expect(evict).toHaveBeenCalledTimes(1);
+        expect(evict).toHaveBeenCalledWith({
+          isExpired: true,
+          key: 'foo',
+          value: 100
+        });
+      });
+
+      it('should trigger eviction for other items', async () => {
+        const evict = jest.fn(() => {});
+        const cache = createCacheWithExpiredItem({
+          maxSize: 1,
+          onEntryEvicted: evict
+        });
+        cache.set('bar', 2);
+        evict.mockReset();
+        await cache.getOrCreate('foo', () => 1);
+        expect(evict).toHaveBeenCalledTimes(1);
+        expect(evict).toHaveBeenCalledWith({
+          isExpired: false,
+          key: 'bar',
+          value: 2
+        });
+      });
+    });
+
+    describe('when key does not exist', () => {
+      it('should call the creator for a non-async value', async () => {
+        const cache = new LRUCache<string, number>();
+        const creator = jest.fn(() => 4);
+        const v = await cache.getOrCreate('foo', creator);
+        expect(v).toBe(4);
+        expect(creator).toHaveBeenCalledTimes(1);
+      });
+
+      it('should call the creator for an async value', async () => {
+        const cache = new LRUCache<string, number>();
+        const creator = jest.fn(() => Promise.resolve(4));
+        const v = await cache.getOrCreate('foo', creator);
+        expect(v).toBe(4);
+        expect(creator).toHaveBeenCalledTimes(1);
+      });
+
+      it('should pass the options and allow configuration', async () => {
+        const cache = new LRUCache<string, number>();
+        const cloneFn = jest.fn((n: number) => n);
+        const creator = jest.fn((options: LRUCacheSetEntryOptions<string, number>) => {
+          options.cloneFn = cloneFn;
+          options.clone = true;
+          return Promise.resolve(4);
+        });
+        const v = await cache.getOrCreate('foo', creator);
+        expect(v).toBe(4);
+        expect(cloneFn).toHaveBeenCalledTimes(1);
+        expect(cloneFn).toHaveBeenCalledWith(4);
+      });
+
+      it('should not trigger an eviction if not necessary', async () => {
+        const evict = jest.fn(() => {});
+        const cache = new LRUCache<string, number>({
+          onEntryEvicted: evict
+        });
+        cache.set('bar', 2);
+        await cache.getOrCreate('foo', () => 1);
+        expect(evict).not.toHaveBeenCalled();
+      });
+
+      it('should trigger eviction for other items', async () => {
+        const evict = jest.fn(() => {});
+        const cache = new LRUCache<string, number>({
+          maxSize: 1,
+          onEntryEvicted: evict
+        });
+        cache.set('bar', 2);
+        await cache.getOrCreate('foo', () => 1);
+        expect(evict).toHaveBeenCalledTimes(1);
+        expect(evict).toHaveBeenCalledWith({
+          isExpired: false,
+          key: 'bar',
+          value: 2
+        });
+      });
     });
   });
 

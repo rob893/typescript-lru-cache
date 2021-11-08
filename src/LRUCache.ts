@@ -22,6 +22,8 @@ export interface LRUCacheEntry<TKey, TValue> {
   value: TValue;
 }
 
+type CreatorFn<TKey, TValue> = (options: LRUCacheSetEntryOptions<TKey, TValue>) => TValue | Promise<TValue>;
+
 export class LRUCache<TKey = string, TValue = any> {
   private readonly lookupTable: Map<TKey, LRUCacheNode<TKey, TValue>> = new Map();
 
@@ -197,6 +199,21 @@ export class LRUCache<TKey = string, TValue = any> {
     if (node.isExpired) {
       this.removeNodeFromListAndLookupTable(node);
       return null;
+    }
+
+    this.setNodeAsHead(node);
+
+    return node.value;
+  }
+
+  public async getOrCreate(key: TKey, creator: CreatorFn<TKey, TValue>): Promise<TValue> {
+    const node = this.lookupTable.get(key);
+
+    if (!node || node.isExpired) {
+      const options: LRUCacheSetEntryOptions<TKey, TValue> = {};
+      const newValue = await creator(options);
+      this.set(key, newValue, options);
+      return newValue;
     }
 
     this.setNodeAsHead(node);
