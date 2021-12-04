@@ -1,19 +1,89 @@
 import { LRUCacheNode } from './LRUCacheNode';
 
 export interface LRUCacheOptions<TKey, TValue> {
+  /**
+   * The max number of items the cache can hold. Once the cache reaches this number, the least recently used entries will start to be evicted to make room for new entries. Defaults to 25.
+   */
   maxSize?: number;
+
+  /**
+   * The time to live for cache entries. Setting this to `null` will make entries never expire. Default value is `null`.
+   */
   entryExpirationTimeInMS?: number | null;
+
+  /**
+   * Function to be called whenever an entry is evicted from the cache (when evicted due to needing to make room, is expired, or deleted using delete()). Passed argument is an object:
+   * ```typescript
+   * {
+   *   key: TKey;
+   *   value: TValue;
+   *   isExpired: boolean;
+   * }
+   * ```
+   */
   onEntryEvicted?: (evictedEntry: { key: TKey; value: TValue; isExpired: boolean }) => void;
+
+  /**
+   * Function to be called whenever an entry is marked as recently used (on set, get, find, etc). Passed argument is an object:
+   * ```typescript
+   * {
+   *   key: TKey;
+   *   value: TValue;
+   * }
+   * ```
+   */
   onEntryMarkedAsMostRecentlyUsed?: (entry: { key: TKey; value: TValue }) => void;
+
+  /**
+   * Clone values being set and fetched from the cache (clones on set and any retrievals). Useful to maintain immutability.
+   * NOTE! This does come with performance overhead (almost twice as slow). Defaults to false.
+   */
   clone?: boolean;
+
+  /**
+   * Custom function to be used with the `clone` option. If not passed, `JSON.parse(JSON.stringify(value))` is used for cloning objects.
+   */
   cloneFn?: (value: TValue) => TValue;
 }
 
 export interface LRUCacheSetEntryOptions<TKey, TValue> {
+  /**
+   * The time to live for this cache entry. Setting this to `null` will make entry never expire. Default value is `null`.
+   */
   entryExpirationTimeInMS?: number | null;
+
+  /**
+   * Function to be called whenever _this_ entry is evicted from the cache (when evicted due to needing to make room, is expired, or deleted using delete()). Passed argument is an object:
+   * ```typescript
+   *  {
+   *    key: TKey;
+   *    value: TValue;
+   *    isExpired: boolean;
+   *  }
+   * ```
+   */
   onEntryEvicted?: (evictedEntry: { key: TKey; value: TValue; isExpired: boolean }) => void;
+
+  /**
+   * Function to be called whenever _this_ entry is marked as recently used (on set, get, find, etc). Passed argument is an object:
+   * ```typescript
+   *  {
+   *    key: TKey;
+   *    value: TValue;
+   *  }
+   * ```
+   */
   onEntryMarkedAsMostRecentlyUsed?: (entry: { key: TKey; value: TValue }) => void;
+
+  /**
+   * Clone values being set and fetched from the cache (clones on set and any retrievals). Useful to maintain immutability.
+   * NOTE! This does come with performance overhead (almost twice as slow). Defaults to false.
+   */
   clone?: boolean;
+
+  /**
+   * Custom function to be used with the `clone` option. If not passed, `JSON.parse(JSON.stringify(value))` is used for cloning objects.
+   */
   cloneFn?: (value: TValue) => TValue;
 }
 
@@ -22,6 +92,14 @@ export interface LRUCacheEntry<TKey, TValue> {
   value: TValue;
 }
 
+/**
+ * A key value cache that implements the LRU policy.
+ *
+ * @typeparam TKey The type of the keys in the cache. Defaults to `string`.
+ * @typeparam TValue The type of the values in the cache. Defaults to `any`.
+ *
+ * @see {@link https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU)}
+ */
 export class LRUCache<TKey = string, TValue = any> {
   private readonly lookupTable: Map<TKey, LRUCacheNode<TKey, TValue>> = new Map();
 
@@ -45,6 +123,17 @@ export class LRUCache<TKey = string, TValue = any> {
    * Creates a new instance of the LRUCache.
    *
    * @param options Additional configuration options for the LRUCache.
+   *
+   * @example
+   * ```typescript
+   * // No options.
+   * const cache = new LRUCache();
+   *
+   * // With options.
+   * const cache = new LRUCache({
+   *  entryExpirationTimeInMS: 10000
+   * });
+   * ```
    */
   public constructor(options?: LRUCacheOptions<TKey, TValue>) {
     const {
@@ -79,6 +168,18 @@ export class LRUCache<TKey = string, TValue = any> {
    * Returns the number of entries in the LRUCache object.
    *
    * @returns The number of entries in the cache.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * cache.set('testKey', 'testValue');
+   *
+   * const size = cache.size;
+   *
+   * // Will log 1
+   * console.log(size);
+   * ```
    */
   public get size(): number {
     return this.lookupTable.size;
@@ -88,6 +189,18 @@ export class LRUCache<TKey = string, TValue = any> {
    * Returns the number of entries that can still be added to the LRUCache without evicting existing entries.
    *
    * @returns The number of entries that can still be added without evicting existing entries.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache({ maxSize: 10 });
+   *
+   * cache.set('testKey', 'testValue');
+   *
+   * const remainingSize = cache.remainingSize;
+   *
+   * // Will log 9 due to 9 spots remaining before reaching maxSize of 10.
+   * console.log(remainingSize);
+   * ```
    */
   public get remainingSize(): number {
     return this.maxSizeInternal - this.size;
@@ -98,6 +211,21 @@ export class LRUCache<TKey = string, TValue = any> {
    * This will not mark the entry as recently used.
    *
    * @returns The most recently used (newest) entry in the cache.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache({ maxSize: 10 });
+   *
+   * cache.set('testKey', 'testValue');
+   *
+   * const newest = cache.newest;
+   *
+   * // Will log testValue
+   * console.log(newest.value);
+   *
+   * // Will log testKey
+   * console.log(newest.key);
+   * ```
    */
   public get newest(): LRUCacheEntry<TKey, TValue> | null {
     if (!this.head) {
@@ -112,6 +240,21 @@ export class LRUCache<TKey = string, TValue = any> {
    * This will not mark the entry as recently used.
    *
    * @returns The least recently used (oldest) entry in the cache.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache({ maxSize: 10 });
+   *
+   * cache.set('testKey', 'testValue');
+   *
+   * const oldest = cache.oldest;
+   *
+   * // Will log testValue
+   * console.log(oldest.value);
+   *
+   * // Will log testKey
+   * console.log(oldest.key);
+   * ```
    */
   public get oldest(): LRUCacheEntry<TKey, TValue> | null {
     if (!this.tail) {
@@ -122,20 +265,28 @@ export class LRUCache<TKey = string, TValue = any> {
   }
 
   /**
-   * Returns the max number of entries the LRUCache can hold.
+   * Gets or sets the maxSize of the cache.
+   * This will evict the least recently used entries if needed to reach new maxSize.
    *
-   * @returns The max size for the cache.
+   * @param value The new value for maxSize. Must be greater than 0.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache({ maxSize: 10 });
+   *
+   * cache.set('testKey', 'testValue');
+   *
+   * // Will be 10
+   * const maxSize = cache.maxSize;
+   *
+   * // Set new maxSize to 5. If there are more than 5 items in the cache, the least recently used entries will be removed until cache size is 5.
+   * cache.maxSize = 5;
+   * ```
    */
   public get maxSize(): number {
     return this.maxSizeInternal;
   }
 
-  /**
-   * Sets the maxSize of the cache.
-   * This will evict the least recently used entries if needed to reach new maxSize.
-   *
-   * @param value The new value for maxSize. Must be greater than 0.
-   */
   public set maxSize(value: number) {
     if (Number.isNaN(value) || value <= 0) {
       throw new Error('maxSize must be greater than 0.');
@@ -155,7 +306,19 @@ export class LRUCache<TKey = string, TValue = any> {
    * @param key The key of the entry.
    * @param value The value to set for the key.
    * @param entryOptions Additional configuration options for the cache entry.
+   *
    * @returns The LRUCache instance.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * // Set the key key2 to value value2. Pass in optional options.
+   * cache.set('key2', 'value2', { entryExpirationTimeInMS: 10 });
+   * ```
    */
   public set(key: TKey, value: TValue, entryOptions?: LRUCacheSetEntryOptions<TKey, TValue>): LRUCache<TKey, TValue> {
     const currentNodeForKey = this.lookupTable.get(key);
@@ -185,7 +348,22 @@ export class LRUCache<TKey = string, TValue = any> {
    * If an entry is returned, this marks the returned entry as the most recently used entry.
    *
    * @param key The key of the entry to get.
+   *
    * @returns The cached value or null.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * // Will be 'testValue'. Entry will now be most recently used.
+   * const item1 = cache.get('testKey');
+   *
+   * // Will be null
+   * const item2 = cache.get('keyNotInCache');
+   * ```
    */
   public get(key: TKey): TValue | null {
     const node = this.lookupTable.get(key);
@@ -210,7 +388,22 @@ export class LRUCache<TKey = string, TValue = any> {
    * Useful if a value is needed but the order of the cache should not be changed.
    *
    * @param key The key of the entry to get.
+   *
    * @returns The cached value or null.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * // Will be 'testValue'
+   * const item1 = cache.peek('testKey');
+   *
+   * // Will be null
+   * const item2 = cache.peek('keyNotInCache');
+   * ```
    */
   public peek(key: TKey): TValue | null {
     const node = this.lookupTable.get(key);
@@ -231,8 +424,23 @@ export class LRUCache<TKey = string, TValue = any> {
    * Deletes the entry for the passed in key.
    *
    * @param key The key of the entry to delete
+   *
    * @returns True if an element in the LRUCache object existed and has been removed,
    * or false if the element does not exist.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * // Will be true
+   * const wasDeleted = cache.delete('testKey');
+   *
+   * // Will be false
+   * const wasDeleted2 = cache.delete('keyNotInCache');
+   * ```
    */
   public delete(key: TKey): boolean {
     const node = this.lookupTable.get(key);
@@ -249,7 +457,22 @@ export class LRUCache<TKey = string, TValue = any> {
    * This does not mark the entry as recently used.
    *
    * @param key The key of the entry to check if exists
+   *
    * @returns true if the cache contains the supplied key. False if not.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * // Will be true
+   * const wasDeleted = cache.has('testKey');
+   *
+   * // Will be false
+   * const wasDeleted2 = cache.has('keyNotInCache');
+   * ```
    */
   public has(key: TKey): boolean {
     return this.lookupTable.has(key);
@@ -257,6 +480,17 @@ export class LRUCache<TKey = string, TValue = any> {
 
   /**
    * Removes all entries in the cache.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * // Clear cache.
+   * cache.clear();
+   * ```
    */
   public clear(): void {
     this.head = null;
@@ -271,7 +505,30 @@ export class LRUCache<TKey = string, TValue = any> {
    * If an entry is returned, this marks the returned entry as the most recently used entry.
    *
    * @param condition The condition to apply to each entry in the
+   *
    * @returns The first cache entry to match the condition. Null if none match.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * // item will be { key: 'testKey', value: 'testValue }
+   * const item = cache.find(entry => {
+   *   const { key, value } = entry;
+   *
+   *   if (key === 'testKey' || value === 'something') {
+   *     return true;
+   *   }
+   *
+   *   return false;
+   * });
+   *
+   * // item2 will be null
+   * const item2 = cache.find(entry => entry.key === 'notInCache');
+   * ```
    */
   public find(condition: (entry: LRUCacheEntry<TKey, TValue>) => boolean): LRUCacheEntry<TKey, TValue> | null {
     let node = this.head;
@@ -305,6 +562,18 @@ export class LRUCache<TKey = string, TValue = any> {
    * No entry will be marked as recently used.
    *
    * @param callback the callback function to apply to the entry
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * cache.forEach((key, value, index) => {
+   *   // do something with key, value, and/or index
+   * });
+   * ```
    */
   public forEach(callback: (value: TValue, key: TKey, index: number) => void): void {
     let node = this.head;
@@ -331,6 +600,18 @@ export class LRUCache<TKey = string, TValue = any> {
    * No entry will be marked as accessed.
    *
    * @returns A Generator for the cache values.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * for (const value of cache.values()) {
+   *   // do something with the value
+   * }
+   * ```
    */
   public *values(): Generator<TValue> {
     let node = this.head;
@@ -355,6 +636,18 @@ export class LRUCache<TKey = string, TValue = any> {
    * No entry will be marked as accessed.
    *
    * @returns A Generator for the cache keys.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * for (const key of cache.keys()) {
+   *   // do something with the key
+   * }
+   * ```
    */
   public *keys(): Generator<TKey> {
     let node = this.head;
@@ -379,6 +672,19 @@ export class LRUCache<TKey = string, TValue = any> {
    * No entry will be marked as accessed.
    *
    * @returns A Generator for the cache entries.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * for (const entry of cache.entries()) {
+   *   const { key, value } = entry;
+   *   // do something with the entry
+   * }
+   * ```
    */
   public *entries(): Generator<LRUCacheEntry<TKey, TValue>> {
     let node = this.head;
@@ -403,6 +709,19 @@ export class LRUCache<TKey = string, TValue = any> {
    * No entry will be marked as accessed.
    *
    * @returns A Generator for the cache entries.
+   *
+   * @example
+   * ```typescript
+   * const cache = new LRUCache();
+   *
+   * // Set the key testKey to value testValue
+   * cache.set('testKey', 'testValue');
+   *
+   * for (const entry of cache) {
+   *   const { key, value } = entry;
+   *   // do something with the entry
+   * }
+   * ```
    */
   public *[Symbol.iterator](): Generator<LRUCacheEntry<TKey, TValue>> {
     let node = this.head;

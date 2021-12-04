@@ -282,7 +282,7 @@ const cache = new LRUCache();
 // Set the key testKey to value testValue
 cache.set('testKey', 'testValue');
 
-for (const key of cache.values()) {
+for (const key of cache.keys()) {
   // do something with the key
 }
 ```
