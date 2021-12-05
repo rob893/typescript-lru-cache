@@ -100,7 +100,7 @@ export interface LRUCacheEntry<TKey, TValue> {
  *
  * @see {@link https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU)}
  */
-export class LRUCache<TKey = string, TValue = any> {
+export class LRUCache<TKey = string, TValue = any> implements Iterable<LRUCacheEntry<TKey, TValue>> {
   private readonly lookupTable: Map<TKey, LRUCacheNode<TKey, TValue>> = new Map();
 
   private readonly entryExpirationTimeInMS: number | null;
