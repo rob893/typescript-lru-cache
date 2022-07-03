@@ -166,6 +166,7 @@ export class LRUCache<TKey = string, TValue = any> implements Iterable<LRUCacheE
 
   /**
    * Returns the number of entries in the LRUCache object.
+   * If the cache has entryExpirationTimeInMS set, expired entries will be removed before the size is returned.
    *
    * @returns The number of entries in the cache.
    *
@@ -182,6 +183,7 @@ export class LRUCache<TKey = string, TValue = any> implements Iterable<LRUCacheE
    * ```
    */
   public get size(): number {
+    this.cleanCache();
     return this.lookupTable.size;
   }
 
@@ -209,6 +211,7 @@ export class LRUCache<TKey = string, TValue = any> implements Iterable<LRUCacheE
   /**
    * Returns the most recently used (newest) entry in the cache.
    * This will not mark the entry as recently used.
+   * If the newest node is expired, it will be removed.
    *
    * @returns The most recently used (newest) entry in the cache.
    *
@@ -232,12 +235,18 @@ export class LRUCache<TKey = string, TValue = any> implements Iterable<LRUCacheE
       return null;
     }
 
+    if (this.head.isExpired) {
+      this.removeNodeFromListAndLookupTable(this.head);
+      return this.newest;
+    }
+
     return this.mapNodeToEntry(this.head);
   }
 
   /**
    * Returns the least recently used (oldest) entry in the cache.
    * This will not mark the entry as recently used.
+   * If the oldest node is expired, it will be removed.
    *
    * @returns The least recently used (oldest) entry in the cache.
    *
@@ -259,6 +268,11 @@ export class LRUCache<TKey = string, TValue = any> implements Iterable<LRUCacheE
   public get oldest(): LRUCacheEntry<TKey, TValue> | null {
     if (!this.tail) {
       return null;
+    }
+
+    if (this.tail.isExpired) {
+      this.removeNodeFromListAndLookupTable(this.tail);
+      return this.oldest;
     }
 
     return this.mapNodeToEntry(this.tail);
@@ -455,6 +469,7 @@ export class LRUCache<TKey = string, TValue = any> implements Iterable<LRUCacheE
   /**
    * Returns a boolean asserting whether a value has been associated to the key in the LRUCache object or not.
    * This does not mark the entry as recently used.
+   * If the cache has a key but the entry is expired, it will be removed and false will be returned.
    *
    * @param key The key of the entry to check if exists
    *
@@ -475,7 +490,18 @@ export class LRUCache<TKey = string, TValue = any> implements Iterable<LRUCacheE
    * ```
    */
   public has(key: TKey): boolean {
-    return this.lookupTable.has(key);
+    const node = this.lookupTable.get(key);
+
+    if (!node) {
+      return false;
+    }
+
+    if (node.isExpired) {
+      this.removeNodeFromListAndLookupTable(node);
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -797,5 +823,22 @@ export class LRUCache<TKey = string, TValue = any> implements Iterable<LRUCacheE
     this.removeNodeFromList(node);
 
     return this.lookupTable.delete(node.key);
+  }
+
+  private cleanCache(): void {
+    // Don't spend time cleaning if entries don't expire.
+    if (!this.entryExpirationTimeInMS) {
+      return;
+    }
+
+    const expiredNodes: LRUCacheNode<TKey, TValue>[] = [];
+
+    for (const node of this.lookupTable.values()) {
+      if (node.isExpired) {
+        expiredNodes.push(node);
+      }
+    }
+
+    expiredNodes.forEach(node => this.removeNodeFromListAndLookupTable(node));
   }
 }
