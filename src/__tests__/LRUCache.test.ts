@@ -175,6 +175,32 @@ describe('LRUCache', () => {
       expect(value).not.toBe(newestValue);
       expect(value).toEqual(newestValue);
     });
+
+    it('should return null for expired newest', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10 });
+
+      cache.set('1', 'value1');
+      (cache as any).head.created = 0;
+      cache.set('2', 'v2');
+      (cache as any).head.created = 0;
+
+      const res = cache.newest;
+
+      expect(res).toBeNull();
+    });
+
+    it('should return second for first being expired', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10 });
+
+      cache.set('1', 'value1');
+      cache.set('2', 'v2');
+      (cache as any).head.created = 0;
+
+      const { key, value } = cache.newest ?? {};
+
+      expect(key).toBe('1');
+      expect(value).toBe('value1');
+    });
   });
 
   describe('oldest', () => {
@@ -238,6 +264,32 @@ describe('LRUCache', () => {
       expect(key).toBe(oldestKey);
       expect(value).not.toBe(oldestValue);
       expect(value).toEqual(oldestValue);
+    });
+
+    it('should return null for expired oldest', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10 });
+
+      cache.set('1', 'value1');
+      (cache as any).head.created = 0;
+      cache.set('2', 'v2');
+      (cache as any).head.created = 0;
+
+      const res = cache.oldest;
+
+      expect(res).toBeNull();
+    });
+
+    it('should return second for first being expired', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10 });
+
+      cache.set('1', 'value1');
+      cache.set('2', 'v2');
+      (cache as any).tail.created = 0;
+
+      const { key, value } = cache.oldest ?? {};
+
+      expect(key).toBe('2');
+      expect(value).toBe('v2');
     });
   });
 
@@ -377,6 +429,18 @@ describe('LRUCache', () => {
       expect(cache.size).toBe(cache.maxSize);
       expect(numNodes).toBe(cache.maxSize);
     });
+
+    it('should remove expired items before returning size', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10 });
+
+      cache.set('1', 'v1');
+      cache.set('2', 'v2');
+      (cache as any).head.created = 0; // force expire
+
+      const res = cache.size;
+
+      expect(res).toBe(1);
+    });
   });
 
   describe('remainingSize', () => {
@@ -486,6 +550,19 @@ describe('LRUCache', () => {
       const result = cache.has(key);
 
       expect(result).toBe(false);
+    });
+
+    it('should return false for an entry that is expired', () => {
+      const cache = new LRUCache({ entryExpirationTimeInMS: 10 });
+      const key = 'key';
+      const value = 'value';
+
+      cache.set(key, value);
+      (cache as any).head.created = 0; // force expiration
+
+      const res = cache.has(key);
+
+      expect(res).toBe(false);
     });
   });
 
